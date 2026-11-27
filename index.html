@@ -2830,6 +2830,18 @@ nav{top:48px!important}
 nav .fuera-area{display:none!important}
 @media (max-width:900px){.areas{display:flex;grid-template-columns:none;border:0;padding:0 6px 0 0;margin:0}.area{flex-direction:row;gap:4px;white-space:nowrap}.nav-grupo{display:none}}
 </style>
+<style id="estiloPerfil">
+.pf-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;flex:none;position:relative;background:linear-gradient(135deg,#1fb6c9,#7c5cff)}
+.pf-av img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.pf-av.g{width:58px;height:58px;font-size:21px}.pf-av.xg{width:96px;height:96px;font-size:32px;margin:0 auto}
+.pf-av .on{position:absolute;right:-1px;bottom:-1px;width:9px;height:9px;border-radius:50%;background:#2fd47a;box-shadow:0 0 0 2px #173a6e}
+.pf-chip{display:flex;align-items:center;gap:8px;padding:3px 10px 3px 3px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);cursor:pointer;color:#fff;transition:background .2s;margin-left:10px}
+.pf-chip:hover{background:rgba(255,255,255,.2)}.pf-chip .t{line-height:1.1;text-align:left}.pf-chip .t b{font-size:12.5px;display:block;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pf-chip .t small{font-size:10.5px;color:#b9cdea}
+.pf-foto-acc{display:flex;gap:6px;justify-content:center;margin-top:8px;flex-wrap:wrap}
+.pf-pc{position:fixed;top:54px;right:12px;width:340px;background:#fff;color:#18233a;border-radius:16px;box-shadow:0 20px 60px rgba(5,15,35,.35);z-index:200;padding:16px}
+.pf-pc h3{margin:0 0 10px;color:#173a6e;font-size:15px;text-align:center}
+@media screen and (max-width:760px){.pf-pc{left:8px;right:8px;width:auto;top:58px}.pf-chip{margin-left:0;padding:2px}.pf-chip .t{display:none}}
+</style>
 <style id="estiloMovil">
 /* ===== Versión para celular (iPhone y Android). En PC y laptop no cambia nada. ===== */
 .mv-menu,.mv-barra,.mv-velo,.mv-instalar{display:none}
@@ -5939,6 +5951,7 @@ function montarAreas(){
   nav.addEventListener('click',e=>{ const b=e.target.closest('button[data-v]'); if(b && b.dataset.area!==AREA) ponerArea(b.dataset.area,false); });
   let a='bod'; try{ a=localStorage.getItem('bodegaArea')||'bod'; }catch(e){} ponerArea(a, true);
   try{ montarMovil(); }catch(e){ console.warn(e); }
+  try{ montarPerfilPC(); }catch(e){ console.warn(e); }
 }
 function ponerArea(id, abrir){
   AREA=AREAS.some(a=>a.id===id)?id:'bod'; try{ localStorage.setItem('bodegaArea',AREA); }catch(e){}
@@ -5985,6 +5998,44 @@ function mvActualizar(){ const bar=document.getElementById('mvBarra'); if(!bar) 
     const oculto=!nb||nb.classList.contains('hidden')||nb.classList.contains('sin-area'); if(x.classList.contains('hidden')!==oculto) x.classList.toggle('hidden',oculto);
     if(x.classList.contains('on')!==(v===act)) x.classList.toggle('on',v===act); });
   const vis=bar.querySelectorAll('button:not(.hidden)').length; bar.style.gridTemplateColumns=`repeat(${vis},1fr)`; }
+
+/* ---------- foto de perfil ---------- */
+const FOTO_OK=/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
+/** Lee una imagen, la recorta en cuadro y la achica (160×160) para guardarla liviana. */
+function fotoDesdeArchivo(file, lado){ lado=lado||160; return new Promise((ok,mal)=>{
+  if(!file||!/^image\//.test(file.type||'image/')) return mal(new Error('Elija una imagen (foto).'));
+  const r=new FileReader(); r.onerror=()=>mal(new Error('No se pudo leer el archivo.'));
+  r.onload=()=>{ const im=new Image(); im.onerror=()=>mal(new Error('No se pudo abrir la imagen. Pruebe con una foto JPG o PNG.'));
+    im.onload=()=>{ const c=document.createElement('canvas'); c.width=c.height=lado; const s=Math.min(im.naturalWidth,im.naturalHeight), g=c.getContext('2d');
+      g.fillStyle='#fff'; g.fillRect(0,0,lado,lado); g.drawImage(im,(im.naturalWidth-s)/2,(im.naturalHeight-s)/2,s,s,0,0,lado,lado); ok(c.toDataURL('image/jpeg',0.82)); };
+    im.src=r.result; };
+  r.readAsDataURL(file); }); }
+function pedirFoto(){ return new Promise(ok=>{ const i=document.createElement('input'); i.type='file'; i.accept='image/*'; i.onchange=async()=>{ const f=i.files[0]; if(!f) return ok(null);
+  try{ ok(await fotoDesdeArchivo(f)); }catch(e){ alert(e.message); ok(null); } }; i.click(); }); }
+function avatarIn(nombre, foto){ return (foto&&FOTO_OK.test(foto))?`<img src="${foto}" alt="">`:esc(String(nombre||'?').replace(/@.*/,'').split(/[\s._-]+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('')||'?'); }
+/* perfil en el programa de la PC (sin internet): se guarda en esta computadora */
+function perfilPC(){ try{ return JSON.parse(localStorage.getItem('bodegaPerfilPC')||'{}'); }catch(e){ return {}; } }
+function guardarPerfilPC(o){ try{ localStorage.setItem('bodegaPerfilPC',JSON.stringify(o)); }catch(e){ alert('No se pudo guardar el perfil en esta computadora (almacenamiento lleno o bloqueado).'); } }
+function montarPerfilPC(){
+  if(document.getElementById('usuarioTop')||document.getElementById('pfChipPC')) return;   // en línea se usa el perfil de la cuenta
+  const hdr=document.querySelector('header.app'); if(!hdr) return;
+  const chip=document.createElement('div'); chip.className='pf-chip'; chip.id='pfChipPC'; chip.title='Mi perfil'; hdr.appendChild(chip);
+  const pintar=()=>{ const p=perfilPC(); chip.innerHTML=`<div class="pf-av">${avatarIn(p.nombre||'Usuario',p.foto)}</div><div class="t"><b>${esc(p.nombre||'Mi perfil')}</b><small>${esc(p.cargo||'Toque para poner su foto')}</small></div>`; };
+  pintar();
+  chip.onclick=e=>{ e.stopPropagation(); const ya=document.getElementById('pfPC'); if(ya){ ya.remove(); return; } const p=perfilPC();
+    const d=document.createElement('div'); d.className='pf-pc'; d.id='pfPC';
+    d.innerHTML=`<h3>👤 Mi perfil en esta computadora</h3><div class="pf-av xg">${avatarIn(p.nombre||'Usuario',p.foto)}</div>
+      <div class="pf-foto-acc"><button class="btn sm pri" id="pfPCfoto">📷 ${p.foto?'Cambiar foto':'Poner foto'}</button>${p.foto?'<button class="btn sm" id="pfPCquitar">🗑 Quitar foto</button>':''}</div>
+      <div class="campo" style="max-width:none;margin-top:10px"><label>Nombre</label><input id="pfPCnom" value="${esc(p.nombre||'')}" placeholder="Su nombre"></div>
+      <div class="campo" style="max-width:none"><label>Cargo</label><input id="pfPCcar" value="${esc(p.cargo||'')}" placeholder="Ej.: Encargado de bodega"></div>
+      <div class="fila" style="margin-top:10px;justify-content:space-between"><span class="muted" style="font-size:11.5px">Se guarda solo en esta computadora.</span><button class="btn ok sm" id="pfPCok">Guardar</button></div>`;
+    document.body.appendChild(d);
+    const guardarCampos=()=>{ const q=perfilPC(); q.nombre=d.querySelector('#pfPCnom').value.trim(); q.cargo=d.querySelector('#pfPCcar').value.trim(); guardarPerfilPC(q); };
+    d.querySelector('#pfPCfoto').onclick=async()=>{ guardarCampos(); const f=await pedirFoto(); if(!f) return; const q=perfilPC(); q.foto=f; guardarPerfilPC(q); pintar(); d.remove(); chip.click(); toast('📷 Foto de perfil guardada','ok'); };
+    const qf=d.querySelector('#pfPCquitar'); if(qf) qf.onclick=()=>{ const q=perfilPC(); delete q.foto; guardarPerfilPC(q); pintar(); d.remove(); chip.click(); };
+    d.querySelector('#pfPCok').onclick=()=>{ guardarCampos(); pintar(); d.remove(); toast('✅ Perfil guardado','ok'); }; };
+  document.addEventListener('mousedown',e=>{ const x=document.getElementById('pfPC'); if(x&&!x.contains(e.target)&&!e.target.closest('#pfChipPC')) x.remove(); });
+}
 
 /* ---------- EDITOR DE MATRIZ ---------- */
 let ED={sel:new Set(), foco:null, undo:[], zoom:1};
@@ -7130,12 +7181,12 @@ async function pintarUsuarios(){
   const box=document.getElementById('usuariosLista'); if(!box) return;
   const {data,error}=await sb.from('usuarios_permitidos').select('*').order('agregado');
   if(error){ box.innerHTML='<span class="neg">'+esc(error.message)+'</span>'; return; }
-  const yo=(usuario.email||'').toLowerCase(); SOY_ADMIN=data.some(u=>u.email.toLowerCase()===yo && u.admin);
+  const yo=(usuario.email||'').toLowerCase(); SOY_ADMIN=data.some(u=>u.email.toLowerCase()===yo && u.admin); data.forEach(u=>FOTOS[u.email.toLowerCase()]=u.foto||'');
   box.innerHTML=tablaSimple(['Usuario','Rol','Áreas de trabajo','Último acceso',''], data.map(u=>{ const esYo=u.email.toLowerCase()===yo, ar=areasDe(u), on=!!EN_LINEA[u.email]||esYo;
     const rol=u.admin?'<span class="est ok">👑 Administrador</span>':(u.solo_solicitud?'<span class="est bajo">📝 Solo solicitudes</span>':'<span class="est nd">Usuario</span>');
     const acc=esYo?'<span class="muted">(usted)</span>':(SOY_ADMIN?`<button class="btn sm" onclick="cambiarRol('${esc(u.email)}',${!u.admin})">${u.admin?'Quitar administrador':'Hacer administrador'}</button> <button class="btn sm" onclick="cambiarSolo('${esc(u.email)}',${!u.solo_solicitud})">${u.solo_solicitud?'Dar acceso completo':'Solo solicitudes'}</button> <button class="btn del sm" onclick="quitarUsuario('${esc(u.email)}')">Quitar acceso</button>`:'');
     const areas=u.admin?'<span class="pf-area">Todas</span>':`<span class="us-areas">${Object.entries(AREA_N).map(([k,n])=>`<label><input type="checkbox" value="${k}" ${ar.includes(k)?'checked':''} ${SOY_ADMIN&&!esYo?'':'disabled'} onchange="guardarAreas('${esc(u.email)}',this)">${n}</label>`).join('')}</span>`;
-    const usu=`<div class="us-u"><div class="pf-av" style="width:32px;height:32px">${esc(iniciales(u.nombre||u.email))}${on?'<span class="on"></span>':''}</div><div><b>${esc(u.nombre||u.email.replace(/@.*/,''))}</b><small>${esc(u.email)}${u.cargo?' · '+esc(u.cargo):''}</small></div></div>`;
+    const usu=`<div class="us-u"><div class="pf-av" style="width:32px;height:32px">${avatarIn(u.nombre||u.email,u.foto)}${on?'<span class="on"></span>':''}</div><div><b>${esc(u.nombre||u.email.replace(/@.*/,''))}</b><small>${esc(u.email)}${u.cargo?' · '+esc(u.cargo):''}</small></div></div>`;
     const acc2=on?'<span class="est ok">🟢 Conectado</span>':(u.ultimo_acceso?new Date(u.ultimo_acceso).toLocaleString('es-SV',{dateStyle:'short',timeStyle:'short'}):'<span class="muted">nunca</span>');
     return [usu, rol, areas, acc2, acc]; }));
   const tb=box.querySelector('table'); if(tb) tb.classList.add('us-tab');
@@ -7200,7 +7251,7 @@ async function arrancar(session){
 let SOLO_SOL=false;
 async function cargarRol(){ try{ const {data}=await sb.from('usuarios_permitidos').select('*'); const yo=(usuario.email||'').toLowerCase();
   const me=(data||[]).find(u=>u.email.toLowerCase()===yo); SOY_ADMIN=!!(me&&me.admin); SOLO_SOL=!!(me&&me.solo_solicitud&&!me.admin);
-  MI_PERFIL=me?Object.assign({},me,{acceso_previo:me.ultimo_acceso}):null; await sb.rpc('marcar_acceso',{}); }catch(e){} pintarChipPerfil(); aplicarRolUI(); try{ aplicarAreas(); }catch(e){} presencia(); }
+  MI_PERFIL=me?Object.assign({},me,{acceso_previo:me.ultimo_acceso}):null; FOTOS={}; (data||[]).forEach(u=>FOTOS[u.email.toLowerCase()]=u.foto||''); await sb.rpc('marcar_acceso',{}); }catch(e){} pintarChipPerfil(); aplicarRolUI(); try{ aplicarAreas(); }catch(e){} presencia(); }
 function aplicarRolUI(){ document.querySelectorAll('nav button[data-v]').forEach(b=>b.classList.toggle('hidden', SOLO_SOL && b.dataset.v!=='vistaSol'));
   document.querySelectorAll('nav .areas, nav .nav-grupo').forEach(e=>e.classList.toggle('hidden', SOLO_SOL)); if(SOLO_SOL){ try{ ponerArea('bod',false); }catch(e){} }
   if(SOLO_SOL){ SOL_TAB='nueva'; irA('vistaSol'); } try{ solBadges(); }catch(e){} }
@@ -7243,7 +7294,7 @@ sb.auth.onAuthStateChange((ev, session)=>{
 });
 
 /* ---- perfil del usuario, permisos por área y quién está conectado ---- */
-let MI_PERFIL=null, EN_LINEA={};
+let MI_PERFIL=null, EN_LINEA={}, FOTOS={};
 const AREA_N={bod:'📦 Bodega', enf:'👩‍⚕️ Enfermería', inf:'📑 Informes', aju:'⚙️ Ajustes'};
 (function(){ const st=document.createElement('style'); st.textContent=`
 #usuarioTop{display:flex;align-items:center}
@@ -7270,21 +7321,25 @@ const nombreDe=p=>(p&&p.nombre)||((usuario&&usuario.email)||'').replace(/@.*/,''
 function rolTxt(p){ return !p?'Usuario':(p.admin?'👑 Administrador':(p.solo_solicitud?'📝 Solo solicitudes':'Usuario')); }
 function areasDe(p){ return (!p||p.admin||!p.areas)?Object.keys(AREA_N):p.areas; }
 function pintarChipPerfil(){ const box=document.getElementById('usuarioTop'); if(!box||!usuario) return; const p=MI_PERFIL;
-  box.innerHTML=`<div class="pf-chip" id="pfChip" title="Mi perfil"><div class="pf-av">${esc(iniciales(nombreDe(p)))}<span class="on"></span></div><div class="t"><b>${esc(nombreDe(p))}</b><small>${esc(rolTxt(p))}</small></div></div>`;
+  box.innerHTML=`<div class="pf-chip" id="pfChip" title="Mi perfil"><div class="pf-av">${avatarIn(nombreDe(p),p&&p.foto)}<span class="on"></span></div><div class="t"><b>${esc(nombreDe(p))}</b><small>${esc(rolTxt(p))}</small></div></div>`;
   document.getElementById('pfChip').onclick=e=>{ e.stopPropagation(); abrirPerfil(); }; }
 function abrirPerfil(){
   const ya=document.getElementById('pfPanel'); if(ya){ ya.remove(); return; } const p=MI_PERFIL||{}, ar=areasDe(p);
   const per=[[true,'Ver la información del sistema'],[!p.solo_solicitud,'Registrar y modificar datos en sus áreas'],[true,'Enviar solicitudes de retiro'],[!!p.admin,'Revisar y aprobar solicitudes de retiro'],[!!p.admin,'Dar o quitar accesos y permisos'],[!!p.admin,'Ver la bitácora de cambios']];
   const otros=Object.values(EN_LINEA).filter(u=>u.email!==usuario.email);
   const d=document.createElement('div'); d.className='pf-panel'; d.id='pfPanel';
-  d.innerHTML=`<div class="pf-cab"><div class="pf-av g">${esc(iniciales(nombreDe(p)))}</div><div><b>${esc(nombreDe(p))}</b><small>${esc(p.cargo||'Sin cargo registrado')}</small><small>${esc(usuario.email)}</small><small style="color:#7fe3f0;font-weight:700;margin-top:3px">${esc(rolTxt(p))}</small></div></div>
+  d.innerHTML=`<div class="pf-cab"><div style="text-align:center"><div class="pf-av g">${avatarIn(nombreDe(p),p.foto)}</div><button class="btn sm" id="pfFoto" style="margin-top:6px;padding:3px 8px;font-size:11px">📷 ${p.foto?'Cambiar':'Poner foto'}</button></div><div><b>${esc(nombreDe(p))}</b><small>${esc(p.cargo||'Sin cargo registrado')}</small><small>${esc(usuario.email)}</small><small style="color:#7fe3f0;font-weight:700;margin-top:3px">${esc(rolTxt(p))}</small></div></div>
     <div class="pf-sec"><h4>Áreas de trabajo</h4>${Object.entries(AREA_N).map(([k,n])=>`<span class="pf-area${ar.includes(k)?'':' no'}">${n}</span>`).join('')}</div>
     <div class="pf-sec"><h4>Lo que puede hacer</h4><ul class="pf-per">${per.map(([ok,t])=>`<li class="${ok?'':'no'}">${ok?'✅':'⛔'} ${t}</li>`).join('')}</ul></div>
-    <div class="pf-sec"><h4>Conectados ahora (${otros.length+1})</h4><div class="pf-lin"><div class="pf-av" style="width:24px;height:24px;font-size:10px">${esc(iniciales(nombreDe(p)))}<span class="on"></span></div> Usted</div>
-      ${otros.map(u=>`<div class="pf-lin"><div class="pf-av" style="width:24px;height:24px;font-size:10px">${esc(iniciales(u.nombre||u.email))}<span class="on"></span></div>${esc(u.nombre||u.email)} <span class="muted" style="font-size:11px">· ${esc(AREA_N[u.area]||'')}</span></div>`).join('')}</div>
+    <div class="pf-sec"><h4>Conectados ahora (${otros.length+1})</h4><div class="pf-lin"><div class="pf-av" style="width:24px;height:24px;font-size:10px">${avatarIn(nombreDe(p),p.foto)}<span class="on"></span></div> Usted</div>
+      ${otros.map(u=>`<div class="pf-lin"><div class="pf-av" style="width:24px;height:24px;font-size:10px">${avatarIn(u.nombre||u.email,FOTOS[(u.email||'').toLowerCase()])}<span class="on"></span></div>${esc(u.nombre||u.email)} <span class="muted" style="font-size:11px">· ${esc(AREA_N[u.area]||'')}</span></div>`).join('')}</div>
     <div class="pf-sec"><h4>Sesión</h4><div style="font-size:13px">Último acceso anterior: <b>${p.acceso_previo?new Date(p.acceso_previo).toLocaleString('es-SV'):'primera vez'}</b><br>La sesión queda abierta hasta que pulse <b>Salir</b>.</div></div>
-    <div class="pf-acc"><button class="btn sm" id="pfEditar">✏️ Mi nombre y cargo</button><button class="btn sm" id="pfClave">🔑 Cambiar contraseña</button>${p.admin?'<button class="btn sm" id="pfUsuarios">👥 Usuarios y permisos</button>':''}<button class="btn del sm" onclick="salir()">⏻ Salir</button></div>`;
+    <div class="pf-acc"><button class="btn sm" id="pfEditar">✏️ Mi nombre y cargo</button>${p.foto?'<button class="btn sm" id="pfQuitarFoto">🗑 Quitar foto</button>':''}<button class="btn sm" id="pfClave">🔑 Cambiar contraseña</button>${p.admin?'<button class="btn sm" id="pfUsuarios">👥 Usuarios y permisos</button>':''}<button class="btn del sm" onclick="salir()">⏻ Salir</button></div>`;
   document.body.appendChild(d);
+  const ponerFoto=async f=>{ const {error}=await sb.rpc('poner_foto',{p_foto:f}); if(error){ alert('No se pudo guardar la foto: '+error.message); return; }
+    p.foto=f||null; if(MI_PERFIL) MI_PERFIL.foto=p.foto; FOTOS[(usuario.email||'').toLowerCase()]=p.foto||''; d.remove(); pintarChipPerfil(); if(vistaActual()==='vistaConfig') pintarUsuarios(); toast(f?'📷 Foto de perfil guardada':'Foto quitada','ok'); };
+  d.querySelector('#pfFoto').onclick=async()=>{ const f=await pedirFoto(); if(f) ponerFoto(f); };
+  const qf=d.querySelector('#pfQuitarFoto'); if(qf) qf.onclick=()=>{ if(confirm('¿Quitar su foto de perfil?')) ponerFoto(null); };
   d.querySelector('#pfEditar').onclick=async()=>{ const n=prompt('Su nombre completo:',p.nombre||''); if(n===null) return; const c=prompt('Su cargo (ej.: Enfermera jefe, Encargado de bodega):',p.cargo||''); if(c===null) return;
     const {error}=await sb.rpc('marcar_acceso',{p_nombre:n,p_cargo:c}); if(error){ alert(error.message); return; } p.nombre=n.trim()||p.nombre; p.cargo=c.trim()||p.cargo; d.remove(); pintarChipPerfil(); presencia(); toast('✅ Perfil actualizado','ok'); };
   d.querySelector('#pfClave').onclick=async()=>{ const a=prompt('Nueva contraseña (mínimo 10 caracteres, con letras y números):'); if(!a) return;
