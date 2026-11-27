@@ -280,9 +280,9 @@ table.grid tr.hlF td{background:#eaf2ff}table.grid td.hlC{background:#fff3c4!imp
 .pl-aviso.bien{background:#e9f8ef;border:1px solid #bfe8d3;color:#0e6b45}
 .pl-aviso ul{margin:6px 0 0;padding-left:18px;max-height:150px;overflow:auto;columns:2;column-gap:28px}
 .pl-prev{background:linear-gradient(180deg,#8d9bb3,#a8b4c8);border-radius:16px;padding:22px;overflow:auto;margin-bottom:14px}
-.pl-hoja{background:#fff;margin:0 auto;box-shadow:0 12px 40px rgba(10,25,50,.35);box-sizing:border-box;position:relative;overflow:hidden}
+.pl-hoja{background:#fff;margin:0 auto;text-align:center;box-shadow:0 12px 40px rgba(10,25,50,.35);box-sizing:border-box;position:relative;overflow:hidden}
 .pl-hoja.desborda{outline:3px dashed #e5484d;outline-offset:-3px;overflow:visible}
-.pl-doc{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;display:inline-block}
+.pl-doc{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;display:inline-block;text-align:left;vertical-align:top}
 .pl-enc{text-align:center;font-weight:700;line-height:1.25;margin-bottom:6px}
 .pl-enc div:nth-child(1){font-size:14px}.pl-enc div:nth-child(2){font-size:13px}.pl-enc div:nth-child(3){font-size:13px}
 table.pl-t{border-collapse:collapse;table-layout:fixed;background:#fff}
@@ -314,6 +314,14 @@ table.pl-t td.falta{background:#ffe1e1}
 .pl-pop .cods button small{display:block;font-weight:400;font-size:9.5px;opacity:.8}
 .pl-pop .fila{gap:6px;align-items:center;margin-top:6px}
 .pl-pop select,.pl-pop input{padding:5px 7px;font-size:13px}
+.pl-leyenda{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0 0 10px;font-size:12.5px}
+.pl-ley{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #e3e9f2;border-radius:999px;padding:3px 10px}
+.pl-ley i,.pl-ley-i{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid rgba(0,0,0,.15)}
+table.pl-t td.nm{cursor:pointer}
+table.pl-t td.nm.rev{box-shadow:inset 4px 0 0 #2fbf71}
+table.pl-t tr.filasel td{background-color:#fff8d6}
+table.pl-t tr.filasel td.nm{background:#ffe9a3}
+table.pl-t tr.filasel td.aus{filter:saturate(1.4) brightness(.97)}
 .pl-res td.neg{color:#c00000;font-weight:700}.pl-res td.pos{color:#0e7a4f;font-weight:700}
 @media print{
   body.impPlan header.app,body.impPlan nav,body.impPlan .toast,body.impPlan .pl-pop{display:none!important}
@@ -322,11 +330,13 @@ table.pl-t td.falta{background:#ffe1e1}
   body.impPlan #vistaPlan>*:not(.pl-prev){display:none!important}
   body.impPlan main{margin:0!important;padding:0!important;max-width:none!important}
   body.impPlan .pl-prev{background:none!important;padding:0!important;margin:0!important;overflow:visible!important;border-radius:0}
-  body.impPlan .pl-hoja{width:auto!important;height:auto!important;min-height:0!important;box-shadow:none!important;padding:0!important;margin:0!important;outline:none!important;overflow:visible!important}
+  body.impPlan .pl-hoja{width:auto!important;height:auto!important;min-height:0!important;box-shadow:none!important;padding:0!important;margin:0!important;outline:none!important;overflow:visible!important;text-align:center!important}
   body.impPlan table.pl-t td.pc.fij::after{display:none}
   body.impPlan table.pl-t td.pc.sel{outline:none;background:#fff}
   body.impPlan table.pl-t td.falta{background:#fff}
   body.impPlan .pl-obs-txt{background-color:#fff}
+  body.impPlan table.pl-t td.aus,body.impPlan table.pl-t tr.filasel td,body.impPlan table.pl-t tr.filasel td.nm{background:#fff!important;filter:none}
+  body.impPlan table.pl-t td.nm.rev{box-shadow:none}
 }
 </style>
 <style id="estiloTab">
@@ -345,13 +355,14 @@ table.pl-t td.falta{background:#ffe1e1}
 .tb-sec{padding:6px 12px;font-weight:800;font-size:12px;color:#173a6e;background:#eef3fb;letter-spacing:.5px}
 .tb-libre{width:100%;font-size:13px;padding:3px 6px}
 .tb-prev{background:linear-gradient(180deg,#8d9bb3,#a8b4c8);border-radius:16px;padding:22px;overflow:auto}
-.tb-pag{background:#fff;margin:0 auto 22px;box-shadow:0 12px 40px rgba(10,25,50,.35);box-sizing:border-box;overflow:hidden}
-.tb-doc{font-family:Arial,Helvetica,sans-serif;color:#000;display:inline-block;background:#fff}
+.tb-pag{background:#fff;margin:0 auto 22px;text-align:center;box-shadow:0 12px 40px rgba(10,25,50,.35);box-sizing:border-box;overflow:hidden}
+.tb-doc{font-family:Arial,Helvetica,sans-serif;color:#000;display:inline-block;background:#fff;text-align:left;vertical-align:top}
 .tb-enc{text-align:center;font-weight:700;font-size:13px;line-height:1.3}
 .tb-sub{display:flex;justify-content:space-between;font-size:11.5px;margin:12px 0 6px}
 table.tb-t{border-collapse:collapse;table-layout:fixed}
 table.tb-t th,table.tb-t td{border:1px solid #000;font-size:8.6px;text-align:center;padding:0 1px;height:19px;overflow:hidden;white-space:nowrap}
 table.tb-t col.ca{width:178px}table.tb-t col.cd{width:24.5px}table.tb-t col.ct{width:34px}
+table.tb-t thead th{height:25px}
 table.tb-t th{background:#d9d9d9;font-weight:700;line-height:1.05;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 table.tb-t th.a{text-align:left;padding-left:2px}
 table.tb-t td.a{text-align:left;padding-left:2px;font-size:8.4px}
@@ -369,7 +380,7 @@ table.tb-t tr.h2 td{height:21px}
   body.impTab #tbZona>*:not(.tb-prev){display:none!important}
   body.impTab main{margin:0!important;padding:0!important;max-width:none!important}
   body.impTab .tb-prev{background:none!important;padding:0!important;overflow:visible!important;border-radius:0}
-  body.impTab .tb-pag{width:auto!important;height:auto!important;min-height:0!important;box-shadow:none!important;padding:0!important;margin:0!important;zoom:1!important;page-break-after:always;break-after:page}
+  body.impTab .tb-pag{width:auto!important;height:auto!important;min-height:0!important;box-shadow:none!important;padding:0!important;margin:0!important;zoom:1!important;page-break-after:always;break-after:page;text-align:center!important}
   body.impTab .tb-pag:last-child{page-break-after:auto;break-after:auto}
   body.impTab table.tb-t td.v:focus{background:inherit!important;box-shadow:none}
 }
@@ -3188,12 +3199,14 @@ nav .fuera-area{display:none!important}
       <button class="sol-tab on" data-pt="cob">👥 Cobertura</button>
       <button class="sol-tab" data-pt="per">🧑‍⚕️ Personal y metas</button>
       <button class="sol-tab" data-pt="cod">🕒 Códigos de turno</button>
+      <button class="sol-tab" data-pt="aus">🏖️ Ausencias y vacaciones</button>
       <button class="sol-tab" data-pt="reg">📏 Reglas</button>
     </div>
     <div id="plConfZona"></div>
   </div>
 
   <div id="plAvisos"></div>
+  <div class="pl-leyenda" id="plLeyenda"></div>
 
   <div class="pl-prev" id="plPrev"><div class="pl-hoja" id="plHoja"></div></div>
 
@@ -5158,9 +5171,12 @@ const PL_COD_DEF=[
   {c:'L',   ini:'', fin:'', h:0, M:0,T:0,N:0, tipo:'d', nom:'Libre / descanso'},
   {c:'A',   ini:'', fin:'', h:0, M:0,T:0,N:0, tipo:'a', nom:'Asueto'},
   {c:'V',   ini:'', fin:'', h:0, M:0,T:0,N:0, tipo:'a', nom:'Vacación'},
-  {c:'P',   ini:'', fin:'', h:0, M:0,T:0,N:0, tipo:'a', nom:'Permiso'},
-  {c:'I',   ini:'', fin:'', h:0, M:0,T:0,N:0, tipo:'a', nom:'Incapacidad'}];
-let PL_MID=null, PL_TAB='cob', PL_SEL=null;
+  {c:'P',   ini:'', fin:'', h:0, M:0,T:0,N:0, tipo:'a', nom:'Permiso personal'},
+  {c:'I',   ini:'', fin:'', h:0, M:0,T:0,N:0, tipo:'a', nom:'Incapacidad'},
+  {c:'O',   ini:'', fin:'', h:0, M:0,T:0,N:0, tipo:'a', nom:'Otra ausencia (ver observación)'}];
+const PL_COLOR={V:'#cfe6ff',P:'#ffe3a8',I:'#ffc9c9',A:'#e4e7ec',O:'#e3d7ff'};
+const plColor=c=>{ const k=plCod(c); if(!k) return ''; return k.color||PL_COLOR[c]||(k.tipo==='a'?'#e3d7ff':''); };
+let PL_MID=null, PL_TAB='cob', PL_SEL=null, PL_FILA=null, PL_AUS_PRE=null;
 const plE=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function plBase(){
   S.plan=S.plan||{}; S.plan.meses=S.plan.meses||{};
@@ -5169,7 +5185,9 @@ function plBase(){
       cob:{lic:{dia:2,M:1,T:1,N:1}, tec:{dia:6,M:4,T:2,N:2}},
       reglas:{maxSeg:5, postNoche:true, tolExtra:12, genN:'N', genT:'6/6', genM:'6/2'},
       imp:{papel:'carta', ofW:13, ofH:8.5, ajustar:true}}; }
-  const b=S.plan.base; b.imp=b.imp||{papel:'carta',ofW:13,ofH:8.5,ajustar:true}; b.reglas=Object.assign({maxSeg:5,postNoche:true,tolExtra:12,genN:'N',genT:'6/6',genM:'6/2'}, b.reglas||{});
+  const b=S.plan.base; b.ausencias=b.ausencias||[]; if(!b.codigos.some(k=>k.c==='O')) b.codigos.push({c:'O',ini:'',fin:'',h:0,M:0,T:0,N:0,tipo:'a',nom:'Otra ausencia (ver observación)'});
+  b.codigos.forEach(k=>{ if(k.c==='P'&&k.nom==='Permiso') k.nom='Permiso personal'; });
+  b.imp=b.imp||{papel:'carta',ofW:13,ofH:8.5,ajustar:true}; b.reglas=Object.assign({maxSeg:5,postNoche:true,tolExtra:12,genN:'N',genT:'6/6',genM:'6/2'}, b.reglas||{});
   return b;
 }
 const plDm=mid=>{ const [y,m]=mid.split('-').map(Number); return new Date(y,m,0).getDate(); };
@@ -5185,7 +5203,17 @@ const plActivos=()=>plBase().personal.filter(p=>p.activo!==false);
 const plCatCob=p=>p.cat==='jefa'?'lic':p.cat;
 const plFij=(M,pid,d)=>!!(M.fij[pid]&&M.fij[pid][d]);
 function plMetaAuto(mid,M){ let n=0; const dm=plDm(mid); for(let d=1;d<=dm;d++){ const w=plDow(mid,d); if(w!==0&&w!==6&&!M.asuetos.includes(d)) n++; } return n*8; }
-function plMeta(mid,M,p){ const v=M.meta[p.id]; return (v!==undefined&&v!==''&&v!==null)?Number(v):plMetaAuto(mid,M); }
+function plDiasAus(mid,M,p){ let n=0; const dm=plDm(mid), c=M.cel[p.id]||{}; for(let d=1;d<=dm;d++){ const k=plCod(c[d]), w=plDow(mid,d); if(k&&k.tipo==='a'&&k.c!=='A'&&w!==0&&w!==6&&!M.asuetos.includes(d)) n++; } return n; }
+function plMeta(mid,M,p){ const v=M.meta[p.id]; return (v!==undefined&&v!==''&&v!==null)?Number(v):Math.max(0,plMetaAuto(mid,M)-8*plDiasAus(mid,M,p)); }
+/* ---- ausencias registradas por rango de fechas (vacaciones, permisos, incapacidades…) ---- */
+const plFecha=(mid,d)=>mid+'-'+String(d).padStart(2,'0');
+function plAusDias(a,mid){ const out=[], dm=plDm(mid); for(let d=1;d<=dm;d++){ const f=plFecha(mid,d); if(f>=a.desde&&f<=a.hasta) out.push(d); } return out; }
+function plAplicarAus(mid){ const B=plBase(), M=plMes(mid); M.aus=M.aus||{};
+  Object.entries(M.aus).forEach(([pid,o])=>Object.entries(o).forEach(([d,id])=>{ const a=B.ausencias.find(x=>x.id===id);
+    if(!a||a.pid!==pid||!plAusDias(a,mid).includes(+d)){ if(M.cel[pid]) M.cel[pid][d]='L'; if(M.fij[pid]) delete M.fij[pid][d]; delete o[d]; } }));
+  B.ausencias.forEach(a=>plAusDias(a,mid).forEach(d=>{ ['cel','fij','aus'].forEach(k=>M[k][a.pid]=M[k][a.pid]||{}); M.cel[a.pid][d]=a.c; M.fij[a.pid][d]=1; M.aus[a.pid][d]=a.id; })); }
+function plDiasRango(a,anio){ let n=0; const ini=new Date(a.desde+'T12:00'), fin=new Date(a.hasta+'T12:00'); for(let x=new Date(ini); x<=fin; x.setDate(x.getDate()+1)) if(!anio||x.getFullYear()===anio) n++; return n; }
+function plVacUsadas(p,anio){ return plBase().ausencias.filter(a=>a.pid===p.id&&a.c==='V').reduce((s,a)=>s+plDiasRango(a,anio),0); }
 function plHoras(M,p,dm){ let h=0; const c=M.cel[p.id]||{}, e=M.ext[p.id]||{}; for(let d=1;d<=dm;d++){ if(c[d]) h+=plH(c[d]); if(e[d]) h+=Number(e[d])||0; } return h; }
 function plExtras(M,p,dm){ let h=0; const e=M.ext[p.id]||{}; for(let d=1;d<=dm;d++) h+=Number(e[d])||0; return h; }
 function plNoches(M,p,dm){ let n=0; const c=M.cel[p.id]||{}; for(let d=1;d<=dm;d++) if(c[d]&&plFr(c[d]).N) n++; return n; }
@@ -5198,6 +5226,7 @@ function plCobDia(mid,M,d,cat){ let r={M:0,T:0,N:0,dist:0};
 
 /* ---- generador ---- */
 function plGenerar(mid){
+  plAplicarAus(mid);
   const B=plBase(), M=plMes(mid), dm=plDm(mid), R=B.reglas, P=plActivos(), rnd=plRand((M.var||1)*7919+Number(mid.replace('-','')));
   P.forEach(p=>{ const c=M.cel[p.id]=M.cel[p.id]||{}; for(let d=1;d<=dm;d++) if(!plFij(M,p.id,d)) delete c[d];
     const e=M.ext[p.id]; if(e) for(const d in e) if(!plFij(M,p.id,+d)) delete e[d]; });
@@ -5269,8 +5298,9 @@ function plDocHTML(mid){
   let g=null;
   plOrden().forEach(p=>{ if(g!==null && (p.grupo||1)!==g) h+=`<tr class="sep"><td></td>${'<td></td>'.repeat(dm+2)}</tr>`; g=p.grupo||1;
     const c=M.cel[p.id]||{}, e=M.ext[p.id]||{}, n=plNoches(M,p,dm);
-    h+=`<tr><td class="nm" title="${plE((p.num?'N° '+p.num+' · ':'')+PL_CAT[p.cat]+' · '+(p.plaza||''))}">${plE(p.nombre)}</td>`;
-    for(let d=1;d<=dm;d++) h+=`<td class="pc${plFij(M,p.id,d)?' fij':''}${PL_SEL&&PL_SEL.p===p.id&&PL_SEL.d===d?' sel':''}" data-p="${p.id}" data-d="${d}">${plE(c[d]||'')}${e[d]?`<sup>+${plE(e[d])}</sup>`:''}</td>`;
+    const rv=M.rev&&M.rev[p.id];
+    h+=`<tr class="${PL_FILA===p.id?'filasel':''}"><td class="nm${rv?' rev':''}" data-fila="${p.id}" title="${plE((p.num?'N° '+p.num+' · ':'')+PL_CAT[p.cat]+' · '+(p.plaza||'')+(rv?' · ✔ revisado':'')+' · clic para resaltar la fila')}">${plE(p.nombre)}</td>`;
+    for(let d=1;d<=dm;d++){ const col=plColor(c[d]); h+=`<td class="pc${plFij(M,p.id,d)?' fij':''}${col?' aus':''}${PL_SEL&&PL_SEL.p===p.id&&PL_SEL.d===d?' sel':''}" data-p="${p.id}" data-d="${d}"${col?` style="background:${col}"`:''}>${plE(c[d]||'')}${e[d]?`<sup>+${plE(e[d])}</sup>`:''}</td>`; }
     h+=`<td class="ht">${plHoras(M,p,dm)||''}</td><td class="ht">${n||'-'}</td></tr>`; });
   [['M','Mañana'],['T','Tarde'],['N','Noche']].forEach(([k,n])=>{ h+=`<tr class="tot"><td class="nm">${n}</td>`;
     for(let d=1;d<=dm;d++) h+=`<td${FL.some(f=>f.d===d&&f.k===k)?' class="falta"':''}>${plCobDia(mid,M,d)[k]}</td>`;
@@ -5282,7 +5312,7 @@ function plPapel(){ const b=plBase().imp; return b.papel==='oficio'?{w:+b.ofW||1
 const PL_MG=0.3;
 function plEscala(){ const doc=document.getElementById('plDoc'); if(!doc) return 1; doc.style.zoom=''; const pp=plPapel();
   const w=doc.scrollWidth, h=doc.scrollHeight, aw=(pp.w-2*PL_MG)*96, ah=(pp.h-2*PL_MG)*96;
-  return plBase().imp.ajustar?Math.min(1,aw/w,ah/h):Math.min(1,aw/w); }
+  return plBase().imp.ajustar?Math.min(1.5,aw/w,ah/h):Math.min(1,aw/w); }
 function plVista(){
   const hoja=document.getElementById('plHoja'), prev=document.getElementById('plPrev'), pp=plPapel(), doc=document.getElementById('plDoc'); if(!doc) return;
   hoja.style.zoom=''; hoja.style.width=pp.w*96+'px'; hoja.style.minHeight=pp.h*96+'px'; hoja.style.height=''; hoja.style.padding=PL_MG*96+'px';
@@ -5297,13 +5327,13 @@ function pintarPlan(){
   const B=plBase(), ms=document.getElementById('plMesSel');
   if(!ms.options.length){ ms.innerHTML=PL_MES.map((n,i)=>`<option value="${i+1}">${n.charAt(0)+n.slice(1).toLowerCase()}</option>`).join('');
     const ini=PL_MID||'2026-11'; ms.value=String(+ini.slice(5)); document.getElementById('plAnio').value=ini.slice(0,4); }
-  PL_MID=plMidSel(); const M=plMes(PL_MID);
+  PL_MID=plMidSel(); plAplicarAus(PL_MID); const M=plMes(PL_MID);
   document.getElementById('plPapel').value=B.imp.papel; document.getElementById('plOfW').value=B.imp.ofW; document.getElementById('plOfH').value=B.imp.ofH;
   document.getElementById('plOfDim').classList.toggle('hidden',B.imp.papel!=='oficio'); document.getElementById('plAjustar').checked=!!B.imp.ajustar;
   if(!B.personal.length){ document.getElementById('plHoja').innerHTML='<div style="padding:40px;font:15px Arial;text-align:center">Todavía no hay personal.<br><br>Abra <b>⚙ Configurar → Personal y metas</b> y use <b>📄 Cargar desde la matriz PDF</b> o agregue a las personas.</div>'; }
   else document.getElementById('plHoja').innerHTML=plDocHTML(PL_MID);
   const obs=document.getElementById('plObs'); if(obs) obs.addEventListener('input',()=>{ plMes(PL_MID).obs=obs.innerText.replace(/\n$/,''); plGuardarLento(); });
-  plAvisos(); plResumen(); requestAnimationFrame(plVista);
+  plAvisos(); plLeyenda(); plResumen(); requestAnimationFrame(plVista);
   if(!document.getElementById('plConf').classList.contains('hidden')) plPintarConf();
 }
 let PL_T=null; function plGuardarLento(){ clearTimeout(PL_T); PL_T=setTimeout(()=>guardar(),600); }
@@ -5311,11 +5341,21 @@ function plAvisos(){ const z=document.getElementById('plAvisos'), M=plMes(PL_MID
   if(!Object.keys(M.cel).length){ z.innerHTML=`<div class="pl-aviso bien">Este mes todavía no tiene turnos. Revise <b>⚙ Configurar</b> (cobertura, personal, metas, asuetos) y pulse <b>⚡ Generar mes</b>.</div>`; return; }
   const f=plFaltantes(PL_MID);
   z.innerHTML=f.length?`<div class="pl-aviso mal"><b>⚠ Falta cobertura en ${f.length} caso(s):</b><ul>${f.map(x=>`<li>${plE(x.txt)}</li>`).join('')}</ul></div>`:'<div class="pl-aviso bien">✔ Cobertura completa todos los días según lo configurado.</div>'; }
+function plLeyenda(){ const z=document.getElementById('plLeyenda'); if(!z) return; const B=plBase(), M=plMes(PL_MID), dm=plDm(PL_MID), P=plOrden(), cnt={};
+  P.forEach(p=>{ const c=M.cel[p.id]||{}; for(let d=1;d<=dm;d++){ const k=plCod(c[d]); if(k&&k.tipo==='a') cnt[k.c]=(cnt[k.c]||0)+1; } });
+  const rev=P.filter(p=>M.rev&&M.rev[p.id]).length;
+  z.innerHTML=`<span class="muted">En pantalla (no se imprime):</span>${B.codigos.filter(k=>k.tipo==='a').map(k=>`<span class="pl-ley"><i style="background:${plColor(k.c)}"></i><b>${plE(k.c)}</b> ${plE(k.nom||'')}${cnt[k.c]?` · <b>${cnt[k.c]}</b> día(s)`:''}</span>`).join('')}
+    <span class="pl-ley"><i style="background:#fff;box-shadow:inset 4px 0 0 #2fbf71"></i>Revisados: <b>${rev} de ${P.length}</b></span><button class="btn sm" id="plLeyAus">🏖️ Registrar ausencias / vacaciones</button>`;
+  z.querySelector('#plLeyAus').onclick=()=>plAbrirAus(); }
+function plAbrirAus(pre){ PL_AUS_PRE=pre||null; PL_TAB='aus'; const c=document.getElementById('plConf'); c.classList.remove('hidden'); plPintarConf(); c.scrollIntoView({behavior:'smooth',block:'start'}); }
 function plResumen(){ const M=plMes(PL_MID), dm=plDm(PL_MID);
   const filas=plOrden().map(p=>{ const meta=plMeta(PL_MID,M,p), h=plHoras(M,p,dm), ex=plExtras(M,p,dm), dif=h-meta;
     return `<tr><td>${p.num||'—'}</td><td>${plE(p.nombre)}</td><td>${plE(PL_CAT[p.cat])}</td><td class="num">${meta}</td><td class="num">${h-ex}</td><td class="num">${ex||''}</td><td class="num"><b>${h}</b></td>
-      <td class="num ${dif<0?'neg':''}">${dif<0?-dif:''}</td><td class="num ${dif>0?'pos':''}">${dif>0?dif:''}</td><td class="num">${plNoches(M,p,dm)}/${+p.noches||0}</td></tr>`; }).join('');
-  document.getElementById('plResumen').innerHTML=`<table class="lista pl-res"><thead><tr><th>N° matriz</th><th>Nombre</th><th>Categoría</th><th class="num">Meta (h)</th><th class="num">Turnos (h)</th><th class="num">Extra anotada</th><th class="num">H/T</th><th class="num">Pendientes</th><th class="num">Exceso / extra</th><th class="num">Noches</th></tr></thead><tbody>${filas}</tbody></table>`; }
+      <td class="num ${dif<0?'neg':''}">${dif<0?-dif:''}</td><td class="num ${dif>0?'pos':''}">${dif>0?dif:''}</td><td class="num">${plNoches(M,p,dm)}/${+p.noches||0}</td>
+      <td class="num">${plDiasAus(PL_MID,M,p)||''}</td><td style="text-align:center"><input type="checkbox" class="plRev" data-p="${p.id}" ${M.rev&&M.rev[p.id]?'checked':''}></td></tr>`; }).join('');
+  document.getElementById('plResumen').innerHTML=`<table class="lista pl-res"><thead><tr><th>N° matriz</th><th>Nombre</th><th>Categoría</th><th class="num">Meta (h)</th><th class="num">Turnos (h)</th><th class="num">Extra anotada</th><th class="num">H/T</th><th class="num">Pendientes</th><th class="num">Exceso / extra</th><th class="num">Noches</th><th class="num" title="Días hábiles de vacación, permiso, incapacidad u otra ausencia (se descuentan de la meta automática)">Ausencias</th><th>✔ Revisado</th></tr></thead><tbody>${filas}</tbody></table>`;
+  document.querySelectorAll('#plResumen .plRev').forEach(i=>i.onchange=()=>{ const M2=plMes(PL_MID); M2.rev=M2.rev||{}; if(i.checked) M2.rev[i.dataset.p]=true; else delete M2.rev[i.dataset.p]; guardar();
+    const td=document.querySelector(`#plDoc td.nm[data-fila="${i.dataset.p}"]`); if(td) td.classList.toggle('rev',i.checked); plLeyenda(); }); }
 
 /* ---- edición de una casilla ---- */
 function plCerrarPop(){ const p=document.getElementById('plPop'); if(p) p.remove(); if(PL_SEL){ PL_SEL=null; document.querySelectorAll('#plDoc td.pc.sel').forEach(t=>t.classList.remove('sel')); } }
@@ -5325,9 +5365,10 @@ function plAbrirPop(td){
   const act=(M.cel[pid]||{})[d]||'', ext=(M.ext[pid]||{})[d]||'', fij=plFij(M,pid,d);
   const pop=document.createElement('div'); pop.className='pl-pop'; pop.id='plPop';
   pop.innerHTML=`<h4>${plE(per.nombre)}</h4><div class="muted">${['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][plDow(PL_MID,d)]} ${d} · actual: <b>${plE(act||'—')}</b></div>
-    <div class="cods">${B.codigos.map(k=>`<button data-c="${plE(k.c)}" class="${k.c===act?'on':''}" title="${plE(k.tipo==='t'?k.ini+' – '+k.fin+' · '+k.h+' h':(k.nom||''))}">${plE(k.c)}<small>${k.tipo==='t'?k.h+' h':plE((k.nom||'').split(' ')[0])}</small></button>`).join('')}<button data-c="">∅<small>vaciar</small></button></div>
+    <div class="cods">${B.codigos.map(k=>`<button data-c="${plE(k.c)}" class="${k.c===act?'on':''}"${plColor(k.c)?` style="background:${plColor(k.c)}"`:''} title="${plE(k.tipo==='t'?k.ini+' – '+k.fin+' · '+k.h+' h':(k.nom||''))}">${plE(k.c)}<small>${k.tipo==='t'?k.h+' h':plE((k.nom||'').split(' ')[0])}</small></button>`).join('')}<button data-c="">∅<small>vaciar</small></button></div>
     <div class="fila"><label>⏱ Horas extra</label><input id="plPopExt" type="number" min="0" max="24" step="0.5" value="${plE(ext)}" style="width:70px"><button class="btn sm" id="plPopExtOk">Guardar</button></div>
     <div class="fila"><label>⇄ Intercambiar con</label><select id="plPopSw" style="flex:1"><option value="">— elegir —</option>${plOrden().filter(x=>x.id!==pid).map(x=>`<option value="${x.id}">${plE(x.nombre)} (${plE((M.cel[x.id]||{})[d]||'—')})</option>`).join('')}</select></div>
+    <div class="fila"><button class="btn sm" id="plPopAus" style="width:100%">🏖️ Registrar vacación / permiso / incapacidad desde este día…</button></div>
     <div class="fila" style="justify-content:space-between;margin-top:10px"><label class="pl-chk"><input type="checkbox" id="plPopFij" ${fij?'checked':''}> 📌 Fijar (se respeta al regenerar)</label><button class="btn sm" id="plPopX">Cerrar</button></div>`;
   document.body.appendChild(pop);
   const r=td.getBoundingClientRect(); let x=r.right+8, y=r.top-10; if(x+340>innerWidth) x=r.left-338; if(x<6) x=6; if(y+pop.offsetHeight>innerHeight-8) y=innerHeight-pop.offsetHeight-8; if(y<6) y=6;
@@ -5341,6 +5382,7 @@ function plAbrirPop(td){
     fijar(pid,d,true); fijar(o,d,true); plCerrarPop(); listo('⇄ Turnos intercambiados'); };
   pop.querySelector('#plPopFij').onchange=e=>{ fijar(pid,d,e.target.checked); guardar(); td.classList.toggle('fij',e.target.checked); };
   pop.querySelector('#plPopX').onclick=plCerrarPop;
+  pop.querySelector('#plPopAus').onclick=()=>{ plCerrarPop(); plAbrirAus({pid, desde:plFecha(PL_MID,d)}); };
 }
 
 /* ---- configuración ---- */
@@ -5394,12 +5436,12 @@ function plPintarConf(){
     z.querySelector('#plPerArch').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ const r=await plImportarPersonal(f); guardar(); pintarPlan(); alert(r); }catch(er){ alert('No se pudo leer el PDF: '+er.message); } e.target.value=''; };
   }
   if(PL_TAB==='cod'){
-    z.innerHTML=`<div style="overflow:auto"><table class="lista"><thead><tr><th>Código</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Mañana</th><th>Tarde</th><th>Noche</th><th>Tipo</th><th>Descripción</th><th></th></tr></thead><tbody>
+    z.innerHTML=`<div style="overflow:auto"><table class="lista"><thead><tr><th>Código</th><th>Entrada</th><th>Salida</th><th>Horas</th><th>Mañana</th><th>Tarde</th><th>Noche</th><th>Tipo</th><th>Descripción</th><th>Color</th><th></th></tr></thead><tbody>
       ${B.codigos.map((k,i)=>`<tr data-i="${i}"><td><input data-f="c" value="${plE(k.c)}" style="width:60px;font-weight:700"></td><td><input data-f="ini" type="time" value="${plE(k.ini)}"></td><td><input data-f="fin" type="time" value="${plE(k.fin)}"></td>
         <td><input data-f="h" type="number" min="0" max="24" step="0.5" value="${k.h}" style="width:60px"></td>
         ${['M','T','N'].map(f=>`<td style="text-align:center"><input type="checkbox" data-f="${f}" ${+k[f]?'checked':''}></td>`).join('')}
         <td><select data-f="tipo"><option value="t"${k.tipo==='t'?' selected':''}>Turno</option><option value="d"${k.tipo==='d'?' selected':''}>Descanso</option><option value="a"${k.tipo==='a'?' selected':''}>Ausencia / asueto</option></select></td>
-        <td><input data-f="nom" value="${plE(k.nom||'')}" style="width:150px"></td><td><button class="btn del sm" data-del="1">✖</button></td></tr>`).join('')}</tbody></table></div>
+        <td><input data-f="nom" value="${plE(k.nom||'')}" style="width:150px"></td><td>${k.tipo==='t'?'':`<input type="color" data-f="color" value="${plColor(k.c)||'#e3d7ff'}" title="Color en pantalla (no se imprime)">`}</td><td><button class="btn del sm" data-del="1">✖</button></td></tr>`).join('')}</tbody></table></div>
       <div class="fila" style="margin-top:8px"><button class="btn sm" id="plCodAdd">➕ Agregar código</button><span class="muted">Verifique el horario y las horas de cada código: H/T suma las horas de los turnos más las horas extra anotadas; T/N cuenta los turnos con franja Noche.</span></div>`;
     z.querySelectorAll('tr[data-i]').forEach(tr=>{ const k=B.codigos[+tr.dataset.i];
       tr.querySelectorAll('[data-f]').forEach(inp=>inp.onchange=()=>{ const f=inp.dataset.f; let v=inp.type==='checkbox'?(inp.checked?1:0):inp.value; if(f==='h') v=Number(v)||0;
@@ -5409,6 +5451,33 @@ function plPintarConf(){
         k[f]=v; guardar(); pintarPlan(); });
       tr.querySelector('[data-del]').onclick=()=>{ if(!confirm('¿Eliminar el código '+k.c+'?')) return; B.codigos.splice(+tr.dataset.i,1); guardar(); pintarPlan(); }; });
     z.querySelector('#plCodAdd').onclick=()=>{ const c=prompt('Nuevo código (ej.: 2/8):'); if(!c||B.codigos.some(x=>x.c===c.trim())) return; B.codigos.push({c:c.trim(),ini:'',fin:'',h:8,M:1,T:0,N:0,tipo:'t'}); guardar(); pintarPlan(); };
+  }
+  if(PL_TAB==='aus'){
+    const anio=+PL_MID.slice(0,4), tipos=B.codigos.filter(k=>k.tipo==='a'&&k.c!=='A'), pre=PL_AUS_PRE||{}; PL_AUS_PRE=null;
+    const ini=pre.desde||plFecha(PL_MID,1), per=plOrden(), nomP=id=>(B.personal.find(p=>p.id===id)||{nombre:'(ya no está)'}).nombre;
+    const lista=B.ausencias.filter(a=>+a.desde.slice(0,4)<=anio&&+a.hasta.slice(0,4)>=anio).sort((a,b)=>a.desde<b.desde?-1:1);
+    z.innerHTML=`<div class="pl-grid4"><div class="pl-caja" style="grid-column:span 2"><h3>➕ Registrar ausencia</h3><div class="fila">
+        <div class="campo" style="min-width:230px"><label>Persona</label><select id="plAP">${per.map(p=>`<option value="${p.id}"${p.id===pre.pid?' selected':''}>${plE(p.nombre)}</option>`).join('')}</select></div>
+        <div class="campo"><label>Tipo</label><select id="plAT">${tipos.map(k=>`<option value="${plE(k.c)}">${plE(k.c+' · '+(k.nom||''))}</option>`).join('')}</select></div>
+        <div class="campo"><label>Desde</label><input type="date" id="plAD" value="${ini}"></div><div class="campo"><label>Hasta</label><input type="date" id="plAH" value="${ini}"></div></div>
+        <div class="fila" style="margin-top:6px"><div class="campo" style="flex:3"><label>Nota (opcional)</label><input id="plAN" placeholder="Ej.: incapacidad del ISSS, permiso con goce de sueldo…"></div>
+        <button class="btn ok" id="plAAdd" style="align-self:flex-end">🏖️ Registrar</button></div>
+        <p class="muted" style="margin:6px 0 0">Los días quedan fijados 📌 en el plan con su código y color, la persona no recibe turnos esos días y su meta automática baja 8 h por cada día hábil de ausencia. ¿Falta un tipo? Agréguelo en <b>🕒 Códigos de turno</b> con tipo “Ausencia” y su color.</p></div>
+      <div class="pl-caja" style="grid-column:span 2"><h3>🏖️ Vacaciones ${anio}</h3><div style="max-height:260px;overflow:auto"><table class="lista"><thead><tr><th>Persona</th><th class="num">Le corresponden (días)</th><th class="num">Usados ${anio}</th><th class="num">Disponibles</th></tr></thead><tbody>
+        ${per.map(p=>{ const u=plVacUsadas(p,anio), t=p.vac===undefined||p.vac===null||p.vac===''?null:+p.vac; return `<tr><td>${plE(p.nombre)}</td><td class="num"><input type="number" min="0" max="60" data-vac="${p.id}" value="${t??''}" placeholder="—" style="width:64px"></td><td class="num">${u||''}</td><td class="num ${t!==null&&u>t?'neg':''}">${t===null?'':t-u}</td></tr>`; }).join('')}</tbody></table></div>
+        <p class="muted" style="margin:6px 0 0">Escriba los días de vacación que le corresponden a cada persona según aplique; los usados se cuentan solos con lo registrado como <b>V</b>.</p></div></div>
+      <h3 style="font-size:14px;color:#173a6e;margin:14px 0 6px">Registradas en ${anio} (${lista.length})</h3>
+      ${lista.length?`<div style="overflow:auto"><table class="lista"><thead><tr><th></th><th>Persona</th><th>Tipo</th><th>Desde</th><th>Hasta</th><th class="num">Días</th><th>Nota</th><th></th></tr></thead><tbody>${lista.map(a=>{ const k=plCod(a.c)||{nom:''};
+        return `<tr><td><i class="pl-ley-i" style="background:${plColor(a.c)}"></i></td><td>${plE(nomP(a.pid))}</td><td><b>${plE(a.c)}</b> ${plE(k.nom||'')}</td><td>${fmtFecha(a.desde)}</td><td>${fmtFecha(a.hasta)}</td><td class="num">${plDiasRango(a)}</td><td>${plE(a.nota||'')}</td><td style="white-space:nowrap"><button class="btn sm" data-ver="${a.id}">Ver</button> <button class="btn del sm" data-quitar="${a.id}">✖</button></td></tr>`; }).join('')}</tbody></table></div>`:'<p class="muted">Todavía no hay ausencias registradas este año.</p>'}`;
+    const d=z.querySelector('#plAD'), hh=z.querySelector('#plAH'); d.onchange=()=>{ if(hh.value<d.value) hh.value=d.value; };
+    z.querySelector('#plAAdd').onclick=()=>{ const a={id:'au'+Date.now().toString(36), pid:z.querySelector('#plAP').value, c:z.querySelector('#plAT').value, desde:d.value, hasta:hh.value, nota:z.querySelector('#plAN').value.trim(), reg:new Date().toISOString()};
+      if(!a.desde||!a.hasta||a.hasta<a.desde){ alert('Revise las fechas: “Hasta” no puede ser antes de “Desde”.'); return; }
+      const cruce=B.ausencias.find(x=>x.pid===a.pid&&!(x.hasta<a.desde||x.desde>a.hasta)); if(cruce&&!confirm('Esa persona ya tiene una ausencia del '+fmtFecha(cruce.desde)+' al '+fmtFecha(cruce.hasta)+'. ¿Registrar de todos modos? (los días que coinciden quedan con el tipo nuevo)')) return;
+      B.ausencias.push(a); Object.keys(S.plan.meses).concat([PL_MID]).forEach(m=>plAplicarAus(m)); guardar(); PL_FILA=a.pid; pintarPlan(); toast('🏖️ Ausencia registrada: '+plDiasRango(a)+' día(s)','ok'); };
+    z.querySelectorAll('[data-quitar]').forEach(b=>b.onclick=()=>{ const i=B.ausencias.findIndex(x=>x.id===b.dataset.quitar); if(i<0||!confirm('¿Quitar esta ausencia? Esos días quedan como L (libre); luego puede pulsar ⚡ Generar mes para asignarles turno.')) return;
+      B.ausencias.splice(i,1); Object.keys(S.plan.meses).forEach(m=>plAplicarAus(m)); guardar(); pintarPlan(); });
+    z.querySelectorAll('[data-ver]').forEach(b=>b.onclick=()=>{ const a=B.ausencias.find(x=>x.id===b.dataset.ver); if(!a) return; document.getElementById('plMesSel').value=String(+a.desde.slice(5,7)); document.getElementById('plAnio').value=a.desde.slice(0,4); PL_FILA=a.pid; pintarPlan(); document.getElementById('plPrev').scrollIntoView({behavior:'smooth'}); });
+    z.querySelectorAll('[data-vac]').forEach(i=>i.onchange=()=>{ const p=B.personal.find(x=>x.id===i.dataset.vac); p.vac=i.value===''?null:Number(i.value); guardar(); plPintarConf(); });
   }
   if(PL_TAB==='reg'){ const R=B.reglas, cods=B.codigos.filter(k=>k.tipo==='t').map(k=>k.c), sel=(id,v)=>`<select id="${id}">${cods.map(c=>`<option${c===v?' selected':''}>${plE(c)}</option>`).join('')}</select>`;
     z.innerHTML=`<div class="pl-grid4"><div class="pl-caja"><h3>Descansos</h3>
@@ -5464,7 +5533,8 @@ document.getElementById('plPapel').addEventListener('change',e=>{ plBase().imp.p
 ['plOfW','plOfH'].forEach(id=>document.getElementById(id).addEventListener('change',e=>{ plBase().imp[id==='plOfW'?'ofW':'ofH']=Number(e.target.value)||(id==='plOfW'?13:8.5); guardar(); plVista(); }));
 document.getElementById('plAjustar').addEventListener('change',e=>{ plBase().imp.ajustar=e.target.checked; guardar(); plVista(); });
 document.getElementById('plImp').addEventListener('click',plImprimir);
-document.getElementById('plHoja').addEventListener('click',e=>{ const td=e.target.closest('td.pc'); if(td){ e.stopPropagation(); plAbrirPop(td); } });
+document.getElementById('plHoja').addEventListener('click',e=>{ const td=e.target.closest('td.pc'); if(td){ e.stopPropagation(); plAbrirPop(td); return; }
+  const nm=e.target.closest('td.nm[data-fila]'); if(nm){ PL_FILA=PL_FILA===nm.dataset.fila?null:nm.dataset.fila; document.querySelectorAll('#plDoc tr.filasel').forEach(t=>t.classList.remove('filasel')); if(PL_FILA) nm.parentNode.classList.add('filasel'); } });
 document.addEventListener('mousedown',e=>{ const p=document.getElementById('plPop'); if(p && !p.contains(e.target) && !e.target.closest('td.pc')) plCerrarPop(); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') plCerrarPop(); });
 window.addEventListener('resize',()=>{ if(vistaActual()==='vistaPlan') plVista(); });
@@ -5562,7 +5632,7 @@ function tbPintarMes(){
 }
 function tbVista(){ const pp=tbPapel(), prev=document.getElementById('tbPrev'); if(!prev) return;
   prev.querySelectorAll('.tb-pag').forEach(pg=>{ const doc=pg.querySelector('.tb-doc'); pg.style.zoom=''; doc.style.zoom=''; pg.style.width=pp.w*96+'px'; pg.style.height=pp.h*96+'px'; pg.style.padding=PL_MG*96+'px';
-    const sc=Math.min(1,(pp.w-2*PL_MG)*96/doc.scrollWidth,(pp.h-2*PL_MG)*96/doc.scrollHeight); doc.style.zoom=sc; pg.style.zoom=Math.min(1,(prev.clientWidth-44)/(pp.w*96)); }); }
+    const sc=Math.min(1.6,(pp.w-2*PL_MG)*96/doc.scrollWidth,(pp.h-2*PL_MG)*96/doc.scrollHeight); doc.style.zoom=sc; pg.style.zoom=Math.min(1,(prev.clientWidth-44)/(pp.w*96)); }); }
 function tbImprimir(){
   const modo=TB_MODO; if(modo!=='mes'){ TB_MODO='mes'; }
   // para imprimir se dibuja sin casillas editables y con los guiones del modelo
