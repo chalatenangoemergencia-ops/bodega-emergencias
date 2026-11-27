@@ -175,7 +175,15 @@ table.grid tr.hlF td{background:#eaf2ff}table.grid td.hlC{background:#fff3c4!imp
 <style id="pageStyle"></style>
 <style id="estiloEditor">
 .ed-barra{position:sticky;top:64px;z-index:15}
-.ed-tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;align-items:center}.ed-tools .sep{width:1px;height:28px;background:#d5deeb;margin:0 4px}
+.ed-tools{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;align-items:stretch}
+.ed-g{display:flex;flex-direction:column;gap:4px;background:linear-gradient(180deg,#f8fbff,#f1f5fb);border:1px solid #e1e8f3;border-radius:12px;padding:6px 8px 8px}
+.ed-gt{font-size:10.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#7b8aa3;padding-left:2px}
+.ed-gb{display:flex;gap:5px;flex-wrap:wrap}.ed-gb .btn.sm{padding:6px 11px;font-size:12.5px}
+.ed-ayuda{margin-top:8px}
+.ed-plegable{overflow:hidden;max-height:400px;transition:max-height .35s ease,opacity .25s ease}
+#vistaEd.plegado .ed-plegable{max-height:0;opacity:0}
+#vistaEd.plegado .ed-wrap{max-height:calc(100vh - 190px)}
+.ed-toggle{margin-left:6px;background:#10284f!important;color:#fff!important}
 .ed-zoom{display:flex;align-items:center;gap:6px}.ed-zoom span{min-width:44px;text-align:center;font-weight:700;color:#173a6e}
 .ed-carpeta{font-size:12.5px;color:#3b4a63;margin-bottom:4px}.ed-carpeta.on b{color:#12925f}
 .ed-wrap{--ez:1;overflow:auto;max-height:calc(100vh - 290px);background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(16,34,68,.06),0 6px 18px rgba(16,34,68,.07);border:1px solid #dbe3ef}
@@ -564,28 +572,32 @@ table.grid th{background:linear-gradient(180deg,#2f5ea8,#24508f)}
       <div class="campo"><label>Buscar insumo o código</label><input id="edBus" placeholder="🔎 Escriba para filtrar" style="width:230px"></div>
       <div class="campo"><label>Mostrar</label><select id="edFil"><option value="">Todos</option><option value="mov">Con movimiento</option><option value="sin">Sin código</option><option value="neg">Saldo negativo</option></select></div>
       <div class="campo"><label>Tamaño</label><div class="ed-zoom"><button class="btn sm" data-z="-1">A−</button><span id="edZoomTxt">100%</span><button class="btn sm" data-z="1">A+</button></div></div>
-      <div style="margin-left:auto;text-align:right"><div id="edCarpeta" class="ed-carpeta">📁 Guardado automático en carpeta: <b>sin configurar</b></div>
-        <button class="btn sm" id="edCarpetaBtn">📁 Elegir / activar carpeta</button></div>
+      <div style="margin-left:auto;text-align:right" class="ed-der"><div id="edCarpeta" class="ed-carpeta">📁 Guardado automático en carpeta: <b>sin configurar</b></div>
+        <button class="btn sm" id="edCarpetaBtn">📁 Elegir / activar carpeta</button>
+        <button class="btn sm ed-toggle" id="edToggle" title="Ocultar o mostrar las opciones">⌃ Ocultar opciones</button></div>
     </div>
+    <div class="ed-plegable">
     <div class="ed-tools">
-      <button class="btn ok" data-ed="agregar" title="Agregar un insumo (ficha completa)">➕ Agregar insumo</button>
-      <button class="btn" data-ed="grupo">🗂️ Nuevo grupo</button>
-      <button class="btn" data-ed="editar" title="Modificar código, nombre o nombre corto">✏️ Modificar</button>
-      <button class="btn" data-ed="duplicar">📄 Duplicar</button>
-      <span class="sep"></span>
-      <button class="btn" data-ed="arriba" title="Alt + ↑">▲ Subir</button>
-      <button class="btn" data-ed="abajo" title="Alt + ↓">▼ Bajar</button>
-      <button class="btn" data-ed="moverGrupo">↪ Mover a grupo</button>
-      <button class="btn" data-ed="ordenar">A→Z Ordenar grupo</button>
-      <span class="sep"></span>
-      <button class="btn" data-ed="limpiar" title="Borra el consumo del mes de los insumos marcados">🧽 Limpiar consumo</button>
-      <button class="btn del" data-ed="eliminar">🗑️ Eliminar</button>
-      <button class="btn" data-ed="deshacer" title="Ctrl + Z">↶ Deshacer</button>
-      <span class="sep"></span>
-      <button class="btn pri" data-ed="cerrar">📅 Cerrar mes y pasar existencias</button>
+      <div class="ed-g"><span class="ed-gt">Insumos</span><div class="ed-gb">
+        <button class="btn sm ok" data-ed="agregar" title="Agregar un insumo (ficha completa)">➕ Agregar</button>
+        <button class="btn sm" data-ed="grupo" title="Crear un grupo nuevo">🗂️ Grupo</button>
+        <button class="btn sm" data-ed="editar" title="Modificar código, nombre o nombre corto (o doble clic en el nombre)">✏️ Modificar</button>
+        <button class="btn sm" data-ed="duplicar" title="Copiar el insumo marcado">📄 Duplicar</button></div></div>
+      <div class="ed-g"><span class="ed-gt">Ordenar</span><div class="ed-gb">
+        <button class="btn sm" data-ed="arriba" title="Subir (Alt + ↑)">▲</button>
+        <button class="btn sm" data-ed="abajo" title="Bajar (Alt + ↓)">▼</button>
+        <button class="btn sm" data-ed="moverGrupo" title="Mover los marcados a otro grupo">↪ A grupo</button>
+        <button class="btn sm" data-ed="ordenar" title="Ordenar el grupo de la A a la Z">A→Z</button></div></div>
+      <div class="ed-g"><span class="ed-gt">Quitar</span><div class="ed-gb">
+        <button class="btn sm" data-ed="limpiar" title="Borrar el consumo del mes de los marcados">🧽 Limpiar</button>
+        <button class="btn sm del" data-ed="eliminar" title="Eliminar los insumos marcados">🗑️ Eliminar</button>
+        <button class="btn sm" data-ed="deshacer" title="Deshacer el último cambio (Ctrl + Z)">↶ Deshacer</button></div></div>
+      <div class="ed-g"><span class="ed-gt">Mes</span><div class="ed-gb">
+        <button class="btn sm pri" data-ed="cerrar" title="Pasar el saldo final como existencia inicial del mes siguiente">📅 Cerrar mes</button></div></div>
     </div>
-    <div class="muted" style="margin-top:6px">Marque ☐ uno o varios insumos (o haga clic en una fila) y use los botones. Escriba directo en las casillas: <b>Enter</b> baja, <b>Tab</b> o <b>→</b> avanza, <b>Supr</b> borra, acepta <b>10+8</b>. Todo se guarda solo.</div>
+    <div class="muted ed-ayuda">Marque ☐ uno o varios insumos (o haga clic en una fila) y use los botones · <b>Enter</b> baja · <b>Tab</b>/<b>→</b> avanza · <b>Supr</b> borra · acepta <b>10+8</b> · todo se guarda solo.</div>
     <div id="edAviso"></div>
+    </div>
   </div>
   <div class="panel" id="edCierre" style="display:none"></div>
   <div class="ed-wrap" id="edWrap"><table class="ed-tabla" id="edTabla"></table></div>
@@ -753,11 +765,13 @@ table.grid th{background:linear-gradient(180deg,#2f5ea8,#24508f)}
   </div>
   <div class="panel">
     <h2>👥 Usuarios con acceso</h2>
-    <p class="muted">Solo estos correos pueden ver y modificar la información. Para dar acceso: agregue el correo aquí y pida a la persona que entre a esta página y elija “Crear cuenta”.</p>
+    <p class="muted">Solo estos correos pueden ver y modificar la información. El <b>administrador</b> da o quita el acceso: agrega el correo aquí y la persona entra a esta página y elige “Crear cuenta” (pone su propia contraseña).</p>
     <div id="usuariosLista"></div>
-    <div class="fila" style="margin-top:10px">
+    <div id="notaUsuario" class="muted hidden" style="margin-top:8px">🔒 Solo un administrador puede dar o quitar accesos.</div>
+    <div class="fila hidden" id="formUsuario" style="margin-top:10px">
       <div class="campo" style="min-width:240px"><label>Correo</label><input id="nuevoCorreo" type="email"></div>
       <div class="campo"><label>Nombre</label><input id="nuevoNombre"></div>
+      <label style="font-size:13px;align-self:center"><input type="checkbox" id="nuevoAdmin"> Administrador</label>
       <button class="btn pri" onclick="agregarUsuario()">➕ Dar acceso</button>
     </div>
   </div>
@@ -2319,6 +2333,10 @@ function estadoCarpeta(){ const e=document.getElementById('edCarpeta'); if(!e) r
   e.innerHTML='📁 Guardado automático en carpeta: '+(ED_DIR?`<b>${esc(ED_DIR.name)}</b>${ED_CARPETA_OK?' · '+ED_CARPETA_OK.toLocaleTimeString():''}`:'<b>sin activar</b>');
   document.getElementById('edCarpetaBtn').textContent=ED_DIR?'📁 Cambiar carpeta':'📁 Elegir / activar carpeta'; }
 document.getElementById('edCarpetaBtn').addEventListener('click',()=>activarCarpeta(!!ED_DIR));
+function edPlegar(on){ document.getElementById('vistaEd').classList.toggle('plegado',on); document.getElementById('edToggle').textContent=on?'⌄ Mostrar opciones':'⌃ Ocultar opciones';
+  try{ localStorage.setItem('bodegaEdPlegado',on?'1':''); }catch(e){} }
+document.getElementById('edToggle').addEventListener('click',()=>edPlegar(!document.getElementById('vistaEd').classList.contains('plegado')));
+try{ if(localStorage.getItem('bodegaEdPlegado')) edPlegar(true); }catch(e){}
 { const _g=guardar; guardar=function(){ _g.apply(this,arguments); guardarCarpetaAuto(false); }; }
 
 /* ---------- FICHA DE INSUMO (agregar con datos completos) ---------- */
@@ -3220,21 +3238,30 @@ async function recargar(){
   }catch(e){ console.warn(e); }
 }
 /* ---- usuarios autorizados ---- */
+let SOY_ADMIN=false;
 async function pintarUsuarios(){
   const box=document.getElementById('usuariosLista'); if(!box) return;
   const {data,error}=await sb.from('usuarios_permitidos').select('*').order('agregado');
   if(error){ box.innerHTML='<span class="neg">'+esc(error.message)+'</span>'; return; }
-  box.innerHTML=tablaSimple(['Correo','Nombre',''], data.map(u=>[esc(u.email), u.nombre||'',
-    (u.email.toLowerCase()===(usuario.email||'').toLowerCase())?'<span class="muted">(usted)</span>':`<button class="btn del sm" onclick="quitarUsuario('${esc(u.email)}')">Quitar acceso</button>`]));
+  const yo=(usuario.email||'').toLowerCase(); SOY_ADMIN=data.some(u=>u.email.toLowerCase()===yo && u.admin);
+  box.innerHTML=tablaSimple(['Correo','Nombre','Rol',''], data.map(u=>{ const esYo=u.email.toLowerCase()===yo;
+    const rol=u.admin?'<span class="est ok">👑 Administrador</span>':'<span class="est nd">Usuario</span>';
+    const acc=esYo?'<span class="muted">(usted)</span>':(SOY_ADMIN?`<button class="btn sm" onclick="cambiarRol('${esc(u.email)}',${!u.admin})">${u.admin?'Quitar administrador':'Hacer administrador'}</button> <button class="btn del sm" onclick="quitarUsuario('${esc(u.email)}')">Quitar acceso</button>`:'');
+    return [esc(u.email), esc(u.nombre||''), rol, acc]; }));
+  const f=document.getElementById('formUsuario'); if(f) f.classList.toggle('hidden',!SOY_ADMIN);
+  const n=document.getElementById('notaUsuario'); if(n) n.classList.toggle('hidden',SOY_ADMIN);
 }
 async function agregarUsuario(){
-  const em=document.getElementById('nuevoCorreo').value.trim().toLowerCase(), nom=document.getElementById('nuevoNombre').value.trim();
+  if(!SOY_ADMIN){ alert('Solo un administrador puede dar acceso.'); return; }
+  const em=document.getElementById('nuevoCorreo').value.trim().toLowerCase(), nom=document.getElementById('nuevoNombre').value.trim(), adm=document.getElementById('nuevoAdmin').checked;
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ alert('Escriba un correo válido.'); return; }
-  const {error}=await sb.from('usuarios_permitidos').insert({email:em,nombre:nom||null});
+  const {error}=await sb.from('usuarios_permitidos').insert({email:em,nombre:nom||null,admin:adm});
   if(error){ alert('No se pudo agregar: '+error.message); return; }
-  document.getElementById('nuevoCorreo').value=''; document.getElementById('nuevoNombre').value='';
-  alert('✅ Listo. Ahora esa persona debe entrar a esta página y elegir “Crear cuenta” con el correo '+em+'.'); pintarUsuarios();
+  document.getElementById('nuevoCorreo').value=''; document.getElementById('nuevoNombre').value=''; document.getElementById('nuevoAdmin').checked=false;
+  toast('✅ Acceso dado a '+esc(em)+'. Debe entrar a esta página y elegir “Crear cuenta” con ese correo.','ok'); pintarUsuarios();
 }
+async function cambiarRol(em, adm){ if(!confirm((adm?'¿Hacer administrador a ':'¿Quitar el rol de administrador a ')+em+'?')) return;
+  const {error}=await sb.from('usuarios_permitidos').update({admin:adm}).eq('email',em); if(error) alert(error.message); pintarUsuarios(); }
 async function quitarUsuario(em){ if(!confirm('¿Quitar el acceso de '+em+'?')) return;
   const {error}=await sb.from('usuarios_permitidos').delete().eq('email',em); if(error) alert(error.message); pintarUsuarios(); }
 const _pintarCfg=pintarCfg; pintarCfg=function(){ _pintarCfg(); pintarUsuarios(); };
