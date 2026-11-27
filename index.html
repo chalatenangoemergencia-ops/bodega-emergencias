@@ -2918,8 +2918,24 @@ nav .fuera-area{display:none!important}
   .ed-tabla td.chk,.ed-tabla th.chk{width:32px!important;min-width:32px!important}
   .ed-tabla td.ftot,.ed-tabla th.ftot,.ed-tabla td.fsal,.ed-tabla th.fsal{position:static!important;box-shadow:none!important;min-width:calc(62px*var(--ez))!important;max-width:none!important}
   .ed-tabla thead th.ftot,.ed-tabla thead th.fsal{position:sticky!important;top:0;right:auto!important;left:auto!important}
+  /* que nada se salga de la pantalla */
+  .vista input:not([type=checkbox]):not([type=radio]),.vista select,.vista textarea{max-width:100%}
+  .pl-grid4>*,.tb-cols>*,.inf-grid>*,.pl-conf [style*="grid"]>*,.fila>*{min-width:0}
+  .pl-conf [style*="minmax("],#tbAct [style*="minmax("]{grid-template-columns:1fr!important}
+  .pl-caja,.sol-card,.tb-card,.panel{min-width:0}
+  .pl-jor{min-width:0!important;flex:1 1 100%!important}
+  .tb-ed-f{flex-wrap:nowrap}.tb-ed-f input{min-width:0!important;width:0;flex:1 1 auto}.tb-tag{min-width:0!important;padding:2px 4px}
+  .tb-fila{gap:5px}.tb-fila .n{min-width:0;font-size:12.5px}.tb-fila input{width:62px!important;padding:7px 2px!important}.tb-fila .acum{width:auto!important;font-size:10.5px;white-space:nowrap}
+  #vistaConsumo .ed-zoom{flex-wrap:wrap}
+  #vistaConsumo .campo:has(#conDia){flex:1 1 100%!important}
+  .pl-top>*,.ed-top>*{max-width:100%}
+  .lista{max-width:100%}
+  .mv-grande{position:sticky;left:0;top:0;z-index:5;display:block;margin:0 0 8px;border:0;border-radius:10px;padding:8px 12px;background:#fff;color:#173a6e;font-weight:700;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+  .tb-ed-f{gap:3px!important;padding:4px!important}.tb-ed-f .btn.sm{padding:2px 6px!important;min-height:30px;min-width:28px}
 }
-@media print{.mv-menu,.mv-barra,.mv-velo,.mv-instalar{display:none!important}}
+@media print{.mv-menu,.mv-barra,.mv-velo,.mv-instalar,.mv-grande{display:none!important}}
+.mv-grande{display:none}
+@media screen and (max-width:760px){.mv-grande{display:block}}
 </style>
 </head>
 <body>
@@ -2933,6 +2949,14 @@ nav .fuera-area{display:none!important}
     <div class="fila" style="justify-content:space-between;margin-top:10px">
       <a href="#" onclick="crearCuenta();return false">Crear cuenta</a><a href="#" onclick="olvido();return false">Olvidé mi contraseña</a></div>
     <div id="lgMsg" style="margin-top:12px;text-align:left"></div>
+    <div id="lgCodigoBox" class="hidden" style="margin-top:12px;text-align:left;background:#f1f6ff;border:1px solid #d3e1fa;border-radius:12px;padding:12px">
+      <div style="font-weight:700;color:#173a6e;margin-bottom:6px" id="lgCodTit">📩 Escriba el código que le llegó al correo</div>
+      <input id="lgCodigo" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="••••••" style="width:100%;text-align:center;font-size:26px;letter-spacing:8px;font-weight:800;padding:10px">
+      <div class="campo hidden" id="lgNuevaC" style="margin-top:8px"><label>Nueva contraseña (10 o más, con letras y números)</label><input id="lgNueva" type="password" autocomplete="new-password"></div>
+      <button class="btn ok" style="width:100%;margin-top:8px;padding:10px" onclick="verificarCodigo()">✅ Verificar código</button>
+      <div class="fila" style="justify-content:space-between;margin-top:6px;font-size:13px"><a href="#" onclick="reenviarCodigo();return false">Reenviar código</a><a href="#" onclick="document.getElementById('lgCodigoBox').classList.add('hidden');return false">Cancelar</a></div>
+    </div>
+    <div style="margin-top:8px;font-size:12.5px"><a href="#" onclick="mostrarCodigo('signup');return false">Ya tengo un código</a></div>
   </div>
 </div>
 <div id="cargando" class="hidden" style="position:fixed;inset:0;background:rgba(243,245,249,.9);z-index:90;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--azul)">⟳ Cargando información en línea…</div>
@@ -3530,13 +3554,14 @@ nav .fuera-area{display:none!important}
   </div>
   <div class="panel">
     <h2>👥 Usuarios con acceso</h2>
-    <p class="muted">Solo estos correos pueden ver y modificar la información. El <b>administrador</b> da o quita el acceso: agrega el correo aquí y la persona entra a esta página y elige “Crear cuenta” (pone su propia contraseña).</p>
+    <p class="muted">Solo estos correos pueden ver y modificar la información. El <b>administrador</b> y los <b>encargados</b> que él nombre dan o quitan el acceso: agregan el correo aquí y a la persona le llega una <b>invitación con su código</b> para entrar; la primera vez pone su propia contraseña.</p>
     <div id="usuariosLista"></div>
-    <div id="notaUsuario" class="muted hidden" style="margin-top:8px">🔒 Solo un administrador puede dar o quitar accesos.</div>
+    <div id="notaUsuario" class="muted hidden" style="margin-top:8px">🔒 Solo el administrador o un encargado pueden dar o quitar accesos.</div>
     <div class="fila hidden" id="formUsuario" style="margin-top:10px">
       <div class="campo" style="min-width:240px"><label>Correo</label><input id="nuevoCorreo" type="email"></div>
       <div class="campo"><label>Nombre</label><input id="nuevoNombre"></div>
       <label style="font-size:13px;align-self:center"><input type="checkbox" id="nuevoAdmin"> Administrador</label>
+      <label style="font-size:13px;align-self:center"><input type="checkbox" id="nuevoEnc"> Encargado/a (puede dar acceso)</label>
       <label style="font-size:13px;align-self:center"><input type="checkbox" id="nuevoSolo"> Solo solicitudes de retiro</label>
       <button class="btn pri" onclick="agregarUsuario()">➕ Dar acceso</button>
     </div>
@@ -5468,10 +5493,15 @@ function plVista(){
   hoja.style.zoom=''; hoja.style.width=pp.w*96+'px'; hoja.style.minHeight=pp.h*96+'px'; hoja.style.height=''; hoja.style.padding=PL_MG*96+'px';
   const sc=plEscala(); doc.style.zoom=sc;
   const alto=doc.scrollHeight*sc, cabe=alto<=(pp.h-2*PL_MG)*96+1; hoja.classList.toggle('desborda',!cabe); hoja.style.height=cabe?pp.h*96+'px':'';
-  const disp=prev.clientWidth-44; hoja.style.zoom=Math.min(1,disp/(pp.w*96));
+  const disp=prev.clientWidth-(innerWidth<=760?16:44); hoja.style.zoom=VER_GRANDE?1:Math.min(1,disp/(pp.w*96)); botonGrande(prev,plVista);
   const av=document.getElementById('plAvisoHoja'); if(av) av.remove();
   if(!cabe){ const n=Math.ceil(alto/((pp.h-2*PL_MG)*96)); prev.insertAdjacentHTML('beforebegin',`<div class="pl-aviso mal" id="plAvisoHoja">📄 Sin “Ajustar a una hoja” el documento ocupa unas ${n} hojas. Active <b>Ajustar a una hoja</b> para que salga completo en una sola.</div>`); }
 }
+/* en el celular: ver la hoja en tamaño real y deslizar (no se imprime) */
+let VER_GRANDE=false;
+function botonGrande(prev, repintar){ let b=prev.querySelector('.mv-grande'); if(innerWidth>760){ if(b) b.remove(); return; }
+  if(!b){ b=document.createElement('button'); b.type='button'; b.className='mv-grande'; prev.prepend(b); b.onclick=()=>{ VER_GRANDE=!VER_GRANDE; repintar(); }; }
+  b.textContent=VER_GRANDE?'🔍 Ver toda la hoja':'🔍 Ver grande (deslizar)'; }
 function plMidSel(){ const m=document.getElementById('plMesSel').value, y=document.getElementById('plAnio').value; return y+'-'+String(m).padStart(2,'0'); }
 function pintarPlan(){
   const B=plBase(), ms=document.getElementById('plMesSel');
@@ -5832,7 +5862,7 @@ function tbPintarMes(){
 }
 function tbVista(){ const pp=tbPapel(), prev=document.getElementById('tbPrev'); if(!prev) return;
   prev.querySelectorAll('.tb-pag').forEach(pg=>{ const doc=pg.querySelector('.tb-doc'); pg.style.zoom=''; doc.style.zoom=''; pg.style.width=pp.w*96+'px'; pg.style.height=pp.h*96+'px'; pg.style.padding=PL_MG*96+'px';
-    const sc=Math.min(1.6,(pp.w-2*PL_MG)*96/doc.scrollWidth,(pp.h-2*PL_MG)*96/doc.scrollHeight); doc.style.zoom=sc; pg.style.zoom=Math.min(1,(prev.clientWidth-44)/(pp.w*96)); }); }
+    const sc=Math.min(1.6,(pp.w-2*PL_MG)*96/doc.scrollWidth,(pp.h-2*PL_MG)*96/doc.scrollHeight); doc.style.zoom=sc; pg.style.zoom=VER_GRANDE?1:Math.min(1,(prev.clientWidth-(innerWidth<=760?16:44))/(pp.w*96)); }); botonGrande(prev,tbVista); }
 function tbImprimir(){
   const modo=TB_MODO; if(modo!=='mes'){ TB_MODO='mes'; }
   // para imprimir se dibuja sin casillas editables y con los guiones del modelo
@@ -7177,35 +7207,52 @@ async function recargar(){
 }
 /* ---- usuarios autorizados ---- */
 let SOY_ADMIN=false;
+let PUEDO_INVITAR=false;
 async function pintarUsuarios(){
   const box=document.getElementById('usuariosLista'); if(!box) return;
   const {data,error}=await sb.from('usuarios_permitidos').select('*').order('agregado');
   if(error){ box.innerHTML='<span class="neg">'+esc(error.message)+'</span>'; return; }
-  const yo=(usuario.email||'').toLowerCase(); SOY_ADMIN=data.some(u=>u.email.toLowerCase()===yo && u.admin); data.forEach(u=>FOTOS[u.email.toLowerCase()]=u.foto||'');
-  box.innerHTML=tablaSimple(['Usuario','Rol','Áreas de trabajo','Último acceso',''], data.map(u=>{ const esYo=u.email.toLowerCase()===yo, ar=areasDe(u), on=!!EN_LINEA[u.email]||esYo;
-    const rol=u.admin?'<span class="est ok">👑 Administrador</span>':(u.solo_solicitud?'<span class="est bajo">📝 Solo solicitudes</span>':'<span class="est nd">Usuario</span>');
-    const acc=esYo?'<span class="muted">(usted)</span>':(SOY_ADMIN?`<button class="btn sm" onclick="cambiarRol('${esc(u.email)}',${!u.admin})">${u.admin?'Quitar administrador':'Hacer administrador'}</button> <button class="btn sm" onclick="cambiarSolo('${esc(u.email)}',${!u.solo_solicitud})">${u.solo_solicitud?'Dar acceso completo':'Solo solicitudes'}</button> <button class="btn del sm" onclick="quitarUsuario('${esc(u.email)}')">Quitar acceso</button>`:'');
-    const areas=u.admin?'<span class="pf-area">Todas</span>':`<span class="us-areas">${Object.entries(AREA_N).map(([k,n])=>`<label><input type="checkbox" value="${k}" ${ar.includes(k)?'checked':''} ${SOY_ADMIN&&!esYo?'':'disabled'} onchange="guardarAreas('${esc(u.email)}',this)">${n}</label>`).join('')}</span>`;
-    const usu=`<div class="us-u"><div class="pf-av" style="width:32px;height:32px">${avatarIn(u.nombre||u.email,u.foto)}${on?'<span class="on"></span>':''}</div><div><b>${esc(u.nombre||u.email.replace(/@.*/,''))}</b><small>${esc(u.email)}${u.cargo?' · '+esc(u.cargo):''}</small></div></div>`;
-    const acc2=on?'<span class="est ok">🟢 Conectado</span>':(u.ultimo_acceso?new Date(u.ultimo_acceso).toLocaleString('es-SV',{dateStyle:'short',timeStyle:'short'}):'<span class="muted">nunca</span>');
+  const yo=(usuario.email||'').toLowerCase(), me=data.find(u=>u.email.toLowerCase()===yo)||{}; SOY_ADMIN=!!me.admin; PUEDO_INVITAR=SOY_ADMIN||!!me.puede_invitar; data.forEach(u=>FOTOS[u.email.toLowerCase()]=u.foto||'');
+  box.innerHTML=tablaSimple(['Usuario','Rol','Áreas de trabajo','Último acceso',''], data.map(u=>{ const esYo=u.email.toLowerCase()===yo, ar=areasDe(u), on=!!EN_LINEA[u.email]||esYo, comun=!u.admin&&!u.puede_invitar;
+    const puedeTocar=!esYo&&(SOY_ADMIN||(PUEDO_INVITAR&&comun)), e=esc(u.email);
+    const rol=u.admin?'<span class="est ok">👑 Administrador</span>':(u.puede_invitar?'<span class="est ok">🗝️ Encargado/a (da acceso)</span>':(u.solo_solicitud?'<span class="est bajo">📝 Solo solicitudes</span>':'<span class="est nd">Usuario</span>'));
+    const acc=esYo?'<span class="muted">(usted)</span>':(!puedeTocar?'':[
+      SOY_ADMIN?`<button class="btn sm" onclick="cambiarRol('${e}',${!u.admin})">${u.admin?'Quitar administrador':'Hacer administrador'}</button>`:'',
+      SOY_ADMIN&&!u.admin?`<button class="btn sm" onclick="cambiarEncargado('${e}',${!u.puede_invitar})">${u.puede_invitar?'Quitar encargado':'Hacer encargado/a'}</button>`:'',
+      !u.admin&&!u.puede_invitar?`<button class="btn sm" onclick="cambiarSolo('${e}',${!u.solo_solicitud})">${u.solo_solicitud?'Dar acceso completo':'Solo solicitudes'}</button>`:'',
+      !u.ultimo_acceso?`<button class="btn sm" onclick="enviarInvitacion('${e}')">📩 Reenviar invitación</button>`:'',
+      `<button class="btn del sm" onclick="quitarUsuario('${e}')">Quitar acceso</button>`].filter(Boolean).join(' '));
+    const areas=u.admin?'<span class="pf-area">Todas</span>':`<span class="us-areas">${Object.entries(AREA_N).map(([k,n])=>`<label><input type="checkbox" value="${k}" ${ar.includes(k)?'checked':''} ${puedeTocar?'':'disabled'} onchange="guardarAreas('${e}',this)">${n}</label>`).join('')}</span>`;
+    const usu=`<div class="us-u"><div class="pf-av" style="width:32px;height:32px">${avatarIn(u.nombre||u.email,u.foto)}${on?'<span class="on"></span>':''}</div><div><b>${esc(u.nombre||u.email.replace(/@.*/,''))}</b><small>${e}${u.cargo?' · '+esc(u.cargo):''}${u.invitado_por?' · dio acceso: '+esc(u.invitado_por):''}</small></div></div>`;
+    const acc2=on?'<span class="est ok">🟢 Conectado</span>':(u.ultimo_acceso?new Date(u.ultimo_acceso).toLocaleString('es-SV',{dateStyle:'short',timeStyle:'short'}):'<span class="muted">aún no entra</span>');
     return [usu, rol, areas, acc2, acc]; }));
   const tb=box.querySelector('table'); if(tb) tb.classList.add('us-tab');
-  const f=document.getElementById('formUsuario'); if(f) f.classList.toggle('hidden',!SOY_ADMIN);
-  const n=document.getElementById('notaUsuario'); if(n) n.classList.toggle('hidden',SOY_ADMIN);
+  const f=document.getElementById('formUsuario'); if(f) f.classList.toggle('hidden',!PUEDO_INVITAR);
+  ['nuevoAdmin','nuevoEnc'].forEach(id=>{ const x=document.getElementById(id); if(x) x.parentNode.classList.toggle('hidden',!SOY_ADMIN); });
+  const n=document.getElementById('notaUsuario'); if(n) n.classList.toggle('hidden',PUEDO_INVITAR);
 }
+/* invitación: le llega un correo con su código para entrar (luego pone su contraseña) */
+async function enviarInvitacion(em, silencio){
+  const {error}=await sb.auth.signInWithOtp({email:em, options:{shouldCreateUser:true, emailRedirectTo:location.origin+location.pathname}});
+  if(error){ if(!silencio||true) alert('El acceso quedó dado, pero no se pudo enviar el correo ahora ('+error.message+').\nPuede pulsar “Reenviar invitación” más tarde, o la persona puede entrar a la página y elegir “Crear cuenta”.'); return false; }
+  toast('📩 Invitación con código enviada a '+esc(em),'ok'); return true; }
 async function agregarUsuario(){
-  if(!SOY_ADMIN){ alert('Solo un administrador puede dar acceso.'); return; }
-  const em=document.getElementById('nuevoCorreo').value.trim().toLowerCase(), nom=document.getElementById('nuevoNombre').value.trim(), adm=document.getElementById('nuevoAdmin').checked, solo=!adm&&!!(document.getElementById('nuevoSolo')||{}).checked;
+  if(!PUEDO_INVITAR){ alert('Solo el administrador o un encargado pueden dar acceso.'); return; }
+  const em=document.getElementById('nuevoCorreo').value.trim().toLowerCase(), nom=document.getElementById('nuevoNombre').value.trim();
+  const adm=SOY_ADMIN&&document.getElementById('nuevoAdmin').checked, enc=SOY_ADMIN&&!adm&&!!(document.getElementById('nuevoEnc')||{}).checked, solo=!adm&&!enc&&!!(document.getElementById('nuevoSolo')||{}).checked;
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){ alert('Escriba un correo válido.'); return; }
-  const {error}=await sb.from('usuarios_permitidos').insert({email:em,nombre:nom||null,admin:adm,solo_solicitud:solo});
-  if(error){ alert('No se pudo agregar: '+error.message); return; }
-  document.getElementById('nuevoCorreo').value=''; document.getElementById('nuevoNombre').value=''; document.getElementById('nuevoAdmin').checked=false; if(document.getElementById('nuevoSolo')) document.getElementById('nuevoSolo').checked=false;
-  toast('✅ Acceso dado a '+esc(em)+'. Debe entrar a esta página y elegir “Crear cuenta” con ese correo.','ok'); pintarUsuarios();
+  const {error}=await sb.from('usuarios_permitidos').insert({email:em,nombre:nom||null,admin:adm,puede_invitar:enc,solo_solicitud:solo,invitado_por:(MI_PERFIL&&MI_PERFIL.nombre)||usuario.email});
+  if(error){ alert(/duplicate|unique/i.test(error.message)?'Ese correo ya tiene acceso.':'No se pudo agregar: '+error.message); return; }
+  ['nuevoCorreo','nuevoNombre'].forEach(id=>document.getElementById(id).value=''); ['nuevoAdmin','nuevoEnc','nuevoSolo'].forEach(id=>{ const x=document.getElementById(id); if(x) x.checked=false; });
+  pintarUsuarios();
+  if(confirm('✅ Acceso dado a '+em+'.\n\n¿Enviarle ahora la invitación por correo con su código para entrar?')) enviarInvitacion(em);
 }
+async function cambiarEncargado(em, on){ if(!confirm(on?'¿Hacer encargado/a a '+em+'? Podrá dar y quitar acceso a usuarios comunes.':'¿Quitar el rol de encargado/a a '+em+'?')) return;
+  const {error}=await sb.from('usuarios_permitidos').update({puede_invitar:on, admin:false, solo_solicitud:false}).eq('email',em); if(error) alert(error.message); pintarUsuarios(); }
 async function cambiarSolo(em, solo){ if(!confirm(solo?'¿Dejar a '+em+' solo para solicitudes de retiro? (no podrá cambiar la matriz)':'¿Dar acceso completo a '+em+'?')) return;
-  const {error}=await sb.from('usuarios_permitidos').update({solo_solicitud:solo, admin:false}).eq('email',em); if(error) alert(error.message); pintarUsuarios(); }
+  const {error}=await sb.from('usuarios_permitidos').update({solo_solicitud:solo}).eq('email',em); if(error) alert(error.message); pintarUsuarios(); }
 async function cambiarRol(em, adm){ if(!confirm((adm?'¿Hacer administrador a ':'¿Quitar el rol de administrador a ')+em+'?')) return;
-  const {error}=await sb.from('usuarios_permitidos').update({admin:adm}).eq('email',em); if(error) alert(error.message); pintarUsuarios(); }
+  const {error}=await sb.from('usuarios_permitidos').update({admin:adm, puede_invitar:false}).eq('email',em); if(error) alert(error.message); pintarUsuarios(); }
 async function quitarUsuario(em){ if(!confirm('¿Quitar el acceso de '+em+'?')) return;
   const {error}=await sb.from('usuarios_permitidos').delete().eq('email',em); if(error) alert(error.message); pintarUsuarios(); }
 const _pintarCfg=pintarCfg; pintarCfg=function(){ _pintarCfg(); pintarUsuarios(); };
@@ -7219,17 +7266,33 @@ async function entrar(){ const em=document.getElementById('lgCorreo').value.trim
   const {error}=await sb.auth.signInWithPassword({email:em,password:pw});
   if(error){ const n=Number(sessionStorage.getItem('bodegaFallos')||0)+1; sessionStorage.setItem('bodegaFallos',n);
     if(n>=5){ sessionStorage.setItem('bodegaBloqueo',Date.now()+60000*Math.min(10,n-4)); sessionStorage.setItem('bodegaFallos',0); }
-    msgLogin(error.message.includes('Email not confirmed')?'Primero confirme su correo con el enlace que le llegó.':'Correo o contraseña incorrectos.'); }
+    if(error.message.includes('Email not confirmed')){ msgLogin('Primero confirme su correo con el <b>código</b> que le llegó (o el botón del correo).'); mostrarCodigo('signup'); } else msgLogin('Correo o contraseña incorrectos.'); }
   else sessionStorage.removeItem('bodegaFallos');
 }
 async function crearCuenta(){ const em=document.getElementById('lgCorreo').value.trim(), pw=document.getElementById('lgClave').value;
   if(!em || pw.length<10 || !/[A-Za-z]/.test(pw) || !/\d/.test(pw)){ msgLogin('Escriba su correo y una contraseña <b>segura</b>: al menos 10 caracteres, con letras y números.'); return; }
   const {data,error}=await sb.auth.signUp({email:em,password:pw,options:{emailRedirectTo:location.origin+location.pathname}});
   if(error){ msgLogin(/autorizado/i.test(error.message)?'🔒 Este correo no está autorizado. Pida al administrador que le dé acceso.':'No se pudo crear: '+esc(error.message)); return; }
-  if(data.session) return; msgLogin('✅ Cuenta creada. <b>Revise su correo</b> y haga clic en el enlace para confirmarla; luego entre aquí con su correo y contraseña.',true);
+  if(data.session) return; msgLogin('✅ Cuenta creada. <b>Revise su correo</b>: le enviamos un <b>código</b> (escríbalo abajo) o un botón para confirmar.',true); mostrarCodigo('signup');
 }
+/* verificación con el código que llega al correo */
+let LG_TIPO='signup';
+function mostrarCodigo(tipo){ LG_TIPO=tipo; const b=document.getElementById('lgCodigoBox'); b.classList.remove('hidden'); document.getElementById('lgNuevaC').classList.toggle('hidden',tipo!=='recovery');
+  document.getElementById('lgCodTit').textContent=tipo==='recovery'?'🔑 Escriba el código del correo y su nueva contraseña':'📩 Escriba el código que le llegó al correo'; document.getElementById('lgCodigo').value=''; setTimeout(()=>document.getElementById('lgCodigo').focus(),50); }
+async function verificarCodigo(){ const em=document.getElementById('lgCorreo').value.trim(), tk=document.getElementById('lgCodigo').value.replace(/\D/g,'');
+  if(!em){ msgLogin('Escriba su correo arriba.'); return; } if(tk.length<6){ msgLogin('Escriba el código completo que le llegó al correo.'); return; }
+  let pw=''; if(LG_TIPO==='recovery'){ pw=document.getElementById('lgNueva').value; if(pw.length<10||!/[A-Za-z]/.test(pw)||!/\d/.test(pw)){ msgLogin('La nueva contraseña debe tener al menos 10 caracteres, con letras y números.'); return; } }
+  msgLogin('Verificando…',true);
+  let {error}=await sb.auth.verifyOtp({email:em, token:tk, type:LG_TIPO==='recovery'?'recovery':'email'});
+  if(error && LG_TIPO!=='recovery'){ const r2=await sb.auth.verifyOtp({email:em, token:tk, type:'signup'}); error=r2.error; }
+  if(error){ msgLogin('El código no es válido o ya venció. Pida uno nuevo con “Reenviar código”.'); return; }
+  if(LG_TIPO==='recovery'){ const r=await sb.auth.updateUser({password:pw}); if(r.error){ msgLogin('No se pudo cambiar la contraseña: '+esc(r.error.message)); return; } toast('✅ Contraseña cambiada','ok'); }
+  document.getElementById('lgCodigoBox').classList.add('hidden'); msgLogin('✅ Listo, entrando…',true); }
+async function reenviarCodigo(){ const em=document.getElementById('lgCorreo').value.trim(); if(!em){ msgLogin('Escriba su correo arriba.'); return; }
+  const {error}=LG_TIPO==='recovery'?await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname}):await sb.auth.signInWithOtp({email:em,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname}});
+  msgLogin(error?'No se pudo reenviar: '+esc(error.message)+' (espere un minuto e intente de nuevo).':'📩 Le enviamos un código nuevo al correo.',!error); }
 async function olvido(){ const em=document.getElementById('lgCorreo').value.trim(); if(!em){ msgLogin('Escriba su correo arriba y vuelva a pulsar “Olvidé mi contraseña”.'); return; }
-  const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname}); msgLogin(error?esc(error.message):'Le enviamos un correo para cambiar la contraseña.',!error); }
+  const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname}); msgLogin(error?esc(error.message):'📩 Le enviamos un <b>código</b> al correo para cambiar la contraseña. Escríbalo abajo con su contraseña nueva.',!error); if(!error) mostrarCodigo('recovery'); }
 async function salir(){ await sb.auth.signOut(); location.reload(); }
 let iniciado=false;
 async function arrancar(session){
@@ -7251,7 +7314,7 @@ async function arrancar(session){
 let SOLO_SOL=false;
 async function cargarRol(){ try{ const {data}=await sb.from('usuarios_permitidos').select('*'); const yo=(usuario.email||'').toLowerCase();
   const me=(data||[]).find(u=>u.email.toLowerCase()===yo); SOY_ADMIN=!!(me&&me.admin); SOLO_SOL=!!(me&&me.solo_solicitud&&!me.admin);
-  MI_PERFIL=me?Object.assign({},me,{acceso_previo:me.ultimo_acceso}):null; FOTOS={}; (data||[]).forEach(u=>FOTOS[u.email.toLowerCase()]=u.foto||''); await sb.rpc('marcar_acceso',{}); }catch(e){} pintarChipPerfil(); aplicarRolUI(); try{ aplicarAreas(); }catch(e){} presencia(); }
+  MI_PERFIL=me?Object.assign({},me,{acceso_previo:me.ultimo_acceso}):null; if(me&&!me.ultimo_acceso) setTimeout(bienvenida,800); FOTOS={}; (data||[]).forEach(u=>FOTOS[u.email.toLowerCase()]=u.foto||''); await sb.rpc('marcar_acceso',{}); }catch(e){} pintarChipPerfil(); aplicarRolUI(); try{ aplicarAreas(); }catch(e){} presencia(); }
 function aplicarRolUI(){ document.querySelectorAll('nav button[data-v]').forEach(b=>b.classList.toggle('hidden', SOLO_SOL && b.dataset.v!=='vistaSol'));
   document.querySelectorAll('nav .areas, nav .nav-grupo').forEach(e=>e.classList.toggle('hidden', SOLO_SOL)); if(SOLO_SOL){ try{ ponerArea('bod',false); }catch(e){} }
   if(SOLO_SOL){ SOL_TAB='nueva'; irA('vistaSol'); } try{ solBadges(); }catch(e){} }
@@ -7364,6 +7427,9 @@ function aplicarAreas(){ const ar=areasDe(MI_PERFIL);
   document.querySelectorAll('nav [data-area]:not(.area)').forEach(x=>x.classList.toggle('sin-area',!ar.includes(x.dataset.area)));
   if(!ar.includes(AREA)){ ponerArea(ar[0]||'bod',true); } }
 (function(){ const st=document.createElement('style'); st.textContent='nav .sin-area{display:none!important}'; document.head.appendChild(st); })();
+async function bienvenida(){ const pw=prompt('👋 ¡Bienvenido/a al Sistema de Bodega de Emergencias!\n\nPonga su contraseña para entrar las próximas veces (al menos 10 caracteres, con letras y números):'); if(!pw) return;
+  if(pw.length<10||!/[A-Za-z]/.test(pw)||!/\d/.test(pw)){ alert('La contraseña debe tener al menos 10 caracteres, con letras y números. Puede ponerla después en su perfil (🔑 Cambiar contraseña).'); return; }
+  const {error}=await sb.auth.updateUser({password:pw}); alert(error?'No se pudo guardar: '+error.message:'✅ Contraseña guardada. La próxima vez entre con su correo y esta contraseña.'); }
 async function guardarAreas(em, inp){ const box=inp.closest('.us-areas'), sel=[...box.querySelectorAll('input:checked')].map(i=>i.value);
   if(!sel.length){ alert('Debe tener al menos un área.'); inp.checked=true; return; }
   const {error}=await sb.from('usuarios_permitidos').update({areas:sel.length===Object.keys(AREA_N).length?null:sel}).eq('email',em); if(error) alert(error.message); else toast('✅ Permisos de '+esc(em)+' actualizados','ok'); }
