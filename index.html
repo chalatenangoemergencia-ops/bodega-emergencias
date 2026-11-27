@@ -173,6 +173,33 @@ table.grid tr.hlF td{background:#eaf2ff}table.grid td.hlC{background:#fff3c4!imp
 }
 </style>
 <style id="pageStyle"></style>
+<style id="estiloEditor">
+.ed-barra{position:sticky;top:64px;z-index:15}
+.ed-tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;align-items:center}.ed-tools .sep{width:1px;height:28px;background:#d5deeb;margin:0 4px}
+.ed-zoom{display:flex;align-items:center;gap:6px}.ed-zoom span{min-width:44px;text-align:center;font-weight:700;color:#173a6e}
+.ed-carpeta{font-size:12.5px;color:#3b4a63;margin-bottom:4px}.ed-carpeta.on b{color:#12925f}
+.ed-wrap{--ez:1;overflow:auto;max-height:calc(100vh - 290px);background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(16,34,68,.06),0 6px 18px rgba(16,34,68,.07);border:1px solid #dbe3ef}
+.ed-tabla{border-collapse:separate;border-spacing:0;font-size:calc(14px*var(--ez))}
+.ed-tabla th{position:sticky;top:0;z-index:4;background:linear-gradient(180deg,#2f5ea8,#24508f);color:#fff;padding:calc(9px*var(--ez)) 4px;font-weight:700;white-space:nowrap;border-right:1px solid rgba(255,255,255,.15)}
+.ed-tabla td{border-bottom:1px solid #e6ecf4;border-right:1px solid #eef2f8;padding:0;height:calc(36px*var(--ez));background:#fff}
+.ed-tabla .fx{position:sticky;z-index:3}.ed-tabla th.fx{z-index:6}
+.ed-tabla td.chk,.ed-tabla th.chk{left:0;width:38px;min-width:38px;text-align:center}
+.ed-tabla td.cod,.ed-tabla th.cod{left:38px;min-width:calc(98px*var(--ez))}
+.ed-tabla td.nom,.ed-tabla th.nom{left:calc(38px + 98px*var(--ez));min-width:calc(360px*var(--ez));max-width:calc(360px*var(--ez));box-shadow:2px 0 0 #dbe3ef}
+.ed-tabla td.nom{padding:4px 10px;font-size:calc(13px*var(--ez));line-height:1.25;cursor:pointer}
+.ed-tabla td.cod input{font-weight:700;color:#173a6e}
+.ed-tabla input.c{width:calc(46px*var(--ez));border:0;background:transparent;text-align:center;font:inherit;padding:calc(7px*var(--ez)) 2px;border-radius:0}
+.ed-tabla td.cod input.c{width:calc(92px*var(--ez))}.ed-tabla td.ini input.c{width:calc(70px*var(--ez))}
+.ed-tabla input.c:focus{background:#fff6c9;outline:2px solid #2f5ea8;box-shadow:none}
+.ed-tabla td.calc{padding:0 8px;text-align:right;font-weight:700;white-space:nowrap;background:#f6f8fc}
+.ed-tabla td.sal.neg{color:#c4122f}.ed-tabla td.rec{color:#12925f}
+.ed-tabla tr.cat td{background:linear-gradient(90deg,#dfe8f8,#eef3fb);font-weight:800;color:#173a6e;height:calc(32px*var(--ez))}
+.ed-tabla tr.cat td.nom{letter-spacing:.4px}
+.ed-tabla tr.sel td{background:#eaf2ff!important}.ed-tabla tr.sel td.nom{box-shadow:2px 0 0 #2f5ea8,inset 4px 0 0 #2f5ea8}
+.ed-tabla tr.hlF td{background:#f2f7ff}.ed-tabla .hlC{background:#fff6d1!important}.ed-tabla th.hlC{background:#d98c00!important}
+.ed-tabla tr.flash td{animation:flash 1.2s ease}@keyframes flash{0%{background:#c9f2df}100%{}}
+.ed-tabla td.iauto input{color:#6b7a90;font-style:italic}
+</style>
 <style id="temaModerno">
 /* ===== Tema moderno (solo pantalla; los documentos .doc no cambian) ===== */
 :root{--azul:#173a6e;--azul2:#2f5ea8;--acento:#1fb6c9;--acento2:#7c5cff;--fondo:#eef2f8;--borde:#dbe3ef;--texto:#18233a;--gris:#66748b;
@@ -295,6 +322,7 @@ table.grid th{background:linear-gradient(180deg,#2f5ea8,#24508f)}
   <button data-v="vistaVale">📝 Registrar vale</button>
   <button data-v="vistaVales">📋 Vales registrados</button>
   <button data-v="vistaRet">📤 Retiros de bodega</button>
+  <button data-v="vistaEd">🧮 Editar matriz</button>
   <button data-v="vistaConsumo">📅 Consumo diario</button>
   <button data-v="vistaExist">📊 Existencias</button>
   <button data-v="vistaCodigos">🏷️ Códigos</button>
@@ -526,6 +554,41 @@ table.grid th{background:linear-gradient(180deg,#2f5ea8,#24508f)}
     <div class="kpis" id="rtKpis" style="margin:10px 0"></div>
     <div class="grid-wrap" style="max-height:55vh"><table class="lista" id="rtLista"></table></div>
   </div>
+</section>
+
+<!-- EDITOR DE MATRIZ -->
+<section class="vista hidden" id="vistaEd">
+  <div class="panel ed-barra">
+    <div class="fila" style="align-items:center">
+      <div class="campo"><label>Mes</label><select id="edMes" class="selMes"></select></div>
+      <div class="campo"><label>Buscar insumo o código</label><input id="edBus" placeholder="🔎 Escriba para filtrar" style="width:230px"></div>
+      <div class="campo"><label>Mostrar</label><select id="edFil"><option value="">Todos</option><option value="mov">Con movimiento</option><option value="sin">Sin código</option><option value="neg">Saldo negativo</option></select></div>
+      <div class="campo"><label>Tamaño</label><div class="ed-zoom"><button class="btn sm" data-z="-1">A−</button><span id="edZoomTxt">100%</span><button class="btn sm" data-z="1">A+</button></div></div>
+      <div style="margin-left:auto;text-align:right"><div id="edCarpeta" class="ed-carpeta">📁 Guardado automático en carpeta: <b>sin configurar</b></div>
+        <button class="btn sm" id="edCarpetaBtn">📁 Elegir / activar carpeta</button></div>
+    </div>
+    <div class="ed-tools">
+      <button class="btn ok" data-ed="agregar" title="Agregar un insumo (ficha completa)">➕ Agregar insumo</button>
+      <button class="btn" data-ed="grupo">🗂️ Nuevo grupo</button>
+      <button class="btn" data-ed="editar" title="Modificar código, nombre o nombre corto">✏️ Modificar</button>
+      <button class="btn" data-ed="duplicar">📄 Duplicar</button>
+      <span class="sep"></span>
+      <button class="btn" data-ed="arriba" title="Alt + ↑">▲ Subir</button>
+      <button class="btn" data-ed="abajo" title="Alt + ↓">▼ Bajar</button>
+      <button class="btn" data-ed="moverGrupo">↪ Mover a grupo</button>
+      <button class="btn" data-ed="ordenar">A→Z Ordenar grupo</button>
+      <span class="sep"></span>
+      <button class="btn" data-ed="limpiar" title="Borra el consumo del mes de los insumos marcados">🧽 Limpiar consumo</button>
+      <button class="btn del" data-ed="eliminar">🗑️ Eliminar</button>
+      <button class="btn" data-ed="deshacer" title="Ctrl + Z">↶ Deshacer</button>
+      <span class="sep"></span>
+      <button class="btn pri" data-ed="cerrar">📅 Cerrar mes y pasar existencias</button>
+    </div>
+    <div class="muted" style="margin-top:6px">Marque ☐ uno o varios insumos (o haga clic en una fila) y use los botones. Escriba directo en las casillas: <b>Enter</b> baja, <b>Tab</b> o <b>→</b> avanza, <b>Supr</b> borra, acepta <b>10+8</b>. Todo se guarda solo.</div>
+    <div id="edAviso"></div>
+  </div>
+  <div class="panel" id="edCierre" style="display:none"></div>
+  <div class="ed-wrap" id="edWrap"><table class="ed-tabla" id="edTabla"></table></div>
 </section>
 
 <!-- CUADRE -->
@@ -905,6 +968,7 @@ function refrescar(v){
   if(v==='vistaVale') prepararVale();
   if(v==='vistaVales') pintarVales();
   if(v==='vistaConsumo') pintarGrid();
+  if(v==='vistaEd') pintarEd();
   if(v==='vistaExist') pintarExist();
   if(v==='vistaCuadre') pintarCuadre();
   if(v==='vistaRet') pintarRetiros();
@@ -2092,10 +2156,175 @@ function abrirLeida(fecha){
 }
 document.getElementById('rtFotos').addEventListener('change',e=>{ const fs=[...e.target.files]; e.target.value=''; if(fs.length) subirHojas(fs); });
 
+/* ---------- EDITOR DE MATRIZ ---------- */
+let ED={sel:new Set(), foco:null, undo:[], zoom:1};
+try{ ED.zoom=Number(localStorage.getItem('bodegaEdZoom'))||1; }catch(e){}
+const edMid=()=>document.getElementById('edMes').value;
+function edSnap(){ const m=mes(edMid()); ED.undo.push({mid:m.id, items:JSON.stringify(m.items)}); if(ED.undo.length>40) ED.undo.shift(); }
+function edDeshacer(){ const u=ED.undo.pop(); if(!u){ toast('No hay nada que deshacer'); return; } mes(u.mid).items=JSON.parse(u.items); guardar(); pintarEd(); toast('↶ Cambio deshecho'); }
+function pintarEd(){
+  const sel=document.getElementById('edMes'); if(!sel.dataset.ini){ sel.dataset.ini='1'; const h=new Date(), hid=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0'); if(mes(hid)) sel.value=hid; }
+  const mid=edMid(), m=mes(mid), c=calcular(mid), q=nrK(document.getElementById('edBus').value), fil=document.getElementById('edFil').value, dm=diasDelMes(mid);
+  document.getElementById('edWrap').style.setProperty('--ez',ED.zoom); document.getElementById('edZoomTxt').textContent=Math.round(ED.zoom*100)+'%';
+  let h='<thead><tr><th class="fx chk"><input type="checkbox" id="edTodos" title="Marcar todos"></th><th class="fx cod">CÓDIGO</th><th class="fx nom">INSUMO</th><th data-col="ini">EXIST.<br>INICIAL</th><th>RECIB.</th>';
+  for(let d=1;d<=31;d++) h+=`<th data-col="${d-1}"${d>dm?' style="opacity:.45"':''}>${d}</th>`;
+  h+='<th>TOTAL</th><th>SALDO</th></tr></thead><tbody>';
+  let grupoVisible=null;
+  m.items.forEach(it=>{
+    if(it.t==='c'){ grupoVisible=`<tr class="cat" data-id="${it.id}"><td class="fx chk"></td><td class="fx cod"></td><td class="fx nom" title="Doble clic para cambiar el nombre del grupo">${esc(it.n)}</td><td colspan="35"></td></tr>`; if(!q&&!fil){ h+=grupoVisible; grupoVisible=null; } return; }
+    const x=c[it.id];
+    if(q && !nrK((it.c||'')+' '+it.n).includes(q)) return;
+    if(fil==='mov' && x.sinDatos) return; if(fil==='sin' && it.c) return; if(fil==='neg' && !(x.sal<0)) return;
+    if(grupoVisible){ h+=grupoVisible; grupoVisible=null; }
+    const d=it.d||[];
+    h+=`<tr data-id="${it.id}" class="${ED.sel.has(it.id)?'sel':''}"><td class="fx chk"><input type="checkbox" class="edChk"${ED.sel.has(it.id)?' checked':''}></td>`+
+      `<td class="fx cod"><input class="c" data-k="cod" value="${esc(it.c||'')}"></td><td class="fx nom" title="Doble clic para modificar">${esc(it.n)}</td>`+
+      `<td class="ini${x.iniAuto?' iauto':''}"><input class="c" data-k="ini" value="${it.ini??''}" placeholder="${x.iniAuto?fmt(x.ini):''}" title="${x.iniAuto?'Automática (saldo del mes anterior)':'Existencia inicial'}"></td>`+
+      `<td class="calc rec">${x.rec?fmt(x.rec):''}</td>`;
+    for(let k=0;k<31;k++) h+=`<td><input class="c" data-k="${k}" value="${d[k]!=null&&d[k]!==''?d[k]:''}"${k>=dm?' disabled':''}></td>`;
+    h+=`<td class="calc tot">${fmt(x.cons)}</td><td class="calc sal ${x.sal<0?'neg':''}">${x.sinDatos?'':fmt(x.sal)}</td></tr>`;
+  });
+  document.getElementById('edTabla').innerHTML=h+'</tbody>';
+  const cerr=(S.cfg.cerrados||{})[mid];
+  document.getElementById('edAviso').innerHTML=cerr?`<div class="ok-msg" style="margin-top:8px">📅 ${esc(m.nombre)} se cerró el ${fmtFecha(cerr.slice(0,10))}. Puede seguir corrigiendo; los cambios pasan solos a los meses siguientes.</div>`:'';
+  estadoCarpeta();
+}
+function edFila(td){ const tr=td.closest('tr'); return tr && tr.dataset.id; }
+function edItem(id){ return mes(edMid()).items.find(i=>i.id===id); }
+function edMarcados(){ const ids=[...ED.sel].filter(id=>edItem(id)); if(!ids.length && ED.foco && edItem(ED.foco)) ids.push(ED.foco); return ids; }
+function edActualizarFila(id){ const c=calcular(edMid())[id], tr=document.querySelector(`#edTabla tr[data-id="${id}"]`); if(!c||!tr) return;
+  tr.querySelector('td.tot').textContent=fmt(c.cons); const s=tr.querySelector('td.sal'); s.textContent=c.sinDatos?'':fmt(c.sal); s.classList.toggle('neg',c.sal<0); }
+document.getElementById('edTabla').addEventListener('change',e=>{
+  const inp=e.target;
+  if(inp.id==='edTodos'){ document.querySelectorAll('#edTabla tr[data-id]:not(.cat)').forEach(tr=>{ if(inp.checked) ED.sel.add(tr.dataset.id); else ED.sel.delete(tr.dataset.id); }); pintarEd(); return; }
+  if(inp.classList.contains('edChk')){ const id=edFila(inp); if(inp.checked) ED.sel.add(id); else ED.sel.delete(id); inp.closest('tr').classList.toggle('sel',inp.checked); return; }
+  if(!inp.classList.contains('c')) return;
+  const it=edItem(edFila(inp)); if(!it) return; const k=inp.dataset.k, raw=inp.value.trim();
+  edSnap();
+  if(k==='cod'){ if(raw) it.c=raw; else delete it.c; guardar(); return; }
+  let v=null; if(raw!==''){ v=evalCant(raw); if(isNaN(v)){ alert('Escriba solo números (puede escribir 10+8).'); inp.value=''; return; } inp.value=v; }
+  if(k==='ini'){ if(v===null) delete it.ini; else it.ini=v; }
+  else { const d=Number(k); it.d=it.d||[]; while(it.d.length<=d) it.d.push(null); it.d[d]=v; while(it.d.length && it.d[it.d.length-1]==null) it.d.pop(); }
+  guardar(); edActualizarFila(it.id);
+});
+document.getElementById('edTabla').addEventListener('focusin',e=>{ const inp=e.target; const tr=inp.closest('tr[data-id]'); if(!tr) return; ED.foco=tr.dataset.id;
+  const tb=document.getElementById('edTabla'); tb.querySelectorAll('.hlF').forEach(x=>x.classList.remove('hlF')); tb.querySelectorAll('.hlC').forEach(x=>x.classList.remove('hlC'));
+  tr.classList.add('hlF'); const k=inp.dataset.k; if(k && k!=='cod') tb.querySelectorAll(`input[data-k="${k}"], th[data-col="${k}"]`).forEach(x=>(x.tagName==='INPUT'?x.parentNode:x).classList.add('hlC')); });
+document.getElementById('edTabla').addEventListener('click',e=>{ const tr=e.target.closest('tr[data-id]'); if(tr && !e.target.closest('input')) ED.foco=tr.dataset.id; });
+document.getElementById('edTabla').addEventListener('dblclick',e=>{ const td=e.target.closest('td.nom'); if(!td) return; const id=edFila(td), it=edItem(id); if(!it) return;
+  if(it.t==='c'){ const n=(prompt('Nombre del grupo:',it.n)||'').trim().toUpperCase(); if(n && n!==it.n){ edSnap(); it.n=n; guardar(); pintarEd(); } return; }
+  abrirFicha(edMid(), '', ()=>pintarEd(), it); });
+document.getElementById('edTabla').addEventListener('keydown',e=>{
+  const inp=e.target; if(!inp.classList || !inp.classList.contains('c')) return;
+  const tr=inp.closest('tr'), filas=[...document.querySelectorAll('#edTabla tbody tr:not(.cat)')], r=filas.indexOf(tr), k=inp.dataset.k;
+  const ir=(fila,kk)=>{ const t=filas[fila]; if(!t) return; const x=t.querySelector(`input.c[data-k="${kk}"]`); if(x && !x.disabled){ x.focus(); x.select(); x.scrollIntoView({block:'nearest',inline:'nearest'}); } };
+  const orden=['cod','ini',...Array.from({length:31},(_,i)=>String(i))], ci=orden.indexOf(k);
+  if(e.altKey && (e.key==='ArrowUp'||e.key==='ArrowDown')){ e.preventDefault(); ED.foco=tr.dataset.id; edMover(e.key==='ArrowUp'?-1:1); return; }
+  if(e.key==='Enter'||e.key==='ArrowDown'){ e.preventDefault(); inp.dispatchEvent(new Event('change',{bubbles:true})); ir(r+1,k); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); ir(r-1,k); }
+  else if(e.key==='ArrowRight' && inp.selectionStart===inp.value.length){ e.preventDefault(); ir(r,orden[ci+1]); }
+  else if(e.key==='ArrowLeft' && inp.selectionStart===0){ e.preventDefault(); ir(r,orden[ci-1]); }
+  else if(e.key==='Delete' && inp.value && inp.selectionStart===0 && inp.selectionEnd===inp.value.length){ e.preventDefault(); inp.value=''; inp.dispatchEvent(new Event('change',{bubbles:true})); }
+});
+document.addEventListener('keydown',e=>{ if(vistaActual()==='vistaEd' && (e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z' && !e.target.closest('#dlgFicha')){ e.preventDefault(); edDeshacer(); } });
+function edMover(dir){
+  const m=mes(edMid()), ids=edMarcados(); if(!ids.length){ toast('Marque un insumo o haga clic en su fila'); return; } edSnap();
+  const L=m.items, pos=ids.map(id=>L.findIndex(i=>i.id===id)).sort((a,b)=>dir<0?a-b:b-a);
+  for(const p of pos){ const j=p+dir; if(j<0||j>=L.length) continue; [L[p],L[j]]=[L[j],L[p]]; }
+  propagarOrden(m.id); guardar(); pintarEd(); ids.forEach(id=>{ const tr=document.querySelector(`#edTabla tr[data-id="${id}"]`); if(tr){ tr.classList.add('flash'); tr.scrollIntoView({block:'nearest'}); } });
+}
+function edGrupoDe(m,idx){ for(let j=idx;j>=0;j--) if(m.items[j].t==='c') return j; return -1; }
+const ED_ACC={
+  agregar(){ const m=mes(edMid()); let g=''; if(ED.foco){ const idx=m.items.findIndex(i=>i.id===ED.foco); const gi=edGrupoDe(m,idx); if(gi>=0) g=m.items[gi].id; } if(!g){ const c0=m.items.find(i=>i.t==='c'); g=c0?c0.id:''; }
+    edSnap(); abrirFicha(edMid(), g, nuevo=>{ pintarEd(); if(nuevo){ const tr=document.querySelector(`#edTabla tr[data-id="${nuevo.id}"]`); if(tr){ tr.classList.add('flash'); tr.scrollIntoView({block:'center'}); } } }); },
+  grupo(){ const n=(prompt('Nombre del grupo nuevo (ej.: TUBOS ENDOTRAQUEALES):')||'').trim().toUpperCase(); if(!n) return; edSnap(); const m=mes(edMid());
+    S.meses.slice(S.meses.findIndex(x=>x.id===m.id)).forEach(mm=>{ if(!mm.items.some(i=>i.t==='c'&&nrK(i.n)===nrK(n))) mm.items.push({id:nuevoId(mm.id+'-g'),t:'c',n}); }); guardar(); pintarEd(); toast('🗂️ Grupo creado: '+esc(n),'ok'); },
+  editar(){ const ids=edMarcados(), it=ids.length?edItem(ids[0]):null; if(!it){ toast('Marque el insumo que quiere modificar'); return; } edSnap(); abrirFicha(edMid(), '', ()=>pintarEd(), it); },
+  duplicar(){ const ids=edMarcados(); if(!ids.length){ toast('Marque el insumo a duplicar'); return; } edSnap(); const m=mes(edMid());
+    ids.forEach(id=>{ const k=m.items.findIndex(i=>i.id===id), it=m.items[k]; const cp={id:nuevoId(m.id+'-n'), t:'i', n:it.n+' (COPIA)'}; m.items.splice(k+1,0,cp); }); guardar(); pintarEd(); toast('📄 Insumo duplicado: cambie el nombre o el código con ✏️ Modificar'); },
+  arriba(){ edMover(-1); }, abajo(){ edMover(1); },
+  moverGrupo(){ const ids=edMarcados(); if(!ids.length){ toast('Marque los insumos a mover'); return; } const m=mes(edMid()), cats=m.items.filter(i=>i.t==='c');
+    const n=Number(prompt('¿A qué grupo los mueve? Escriba el número:\n'+cats.map((c,i)=>(i+1)+'. '+c.n).join('\n'))); if(!(n>=1&&n<=cats.length)) return; edSnap();
+    const mov=ids.map(id=>m.items.find(i=>i.id===id)); m.items=m.items.filter(i=>!ids.includes(i.id)); let p=m.items.indexOf(cats[n-1])+1; while(p<m.items.length && m.items[p].t==='i') p++;
+    m.items.splice(p,0,...mov); propagarOrden(m.id); guardar(); pintarEd(); toast('↪ Movido a '+esc(cats[n-1].n),'ok'); },
+  ordenar(){ const m=mes(edMid()); const id=edMarcados()[0]; if(!id){ toast('Marque un insumo del grupo a ordenar'); return; } edSnap(); const gi=edGrupoDe(m,m.items.findIndex(i=>i.id===id));
+    let a=gi+1,b=a; while(b<m.items.length && m.items[b].t==='i') b++; const o=m.items.slice(a,b).sort((x,y)=>nrK(x.n)<nrK(y.n)?-1:1); m.items.splice(a,b-a,...o); propagarOrden(m.id); guardar(); pintarEd(); toast('A→Z Grupo ordenado','ok'); },
+  limpiar(){ const ids=edMarcados(); if(!ids.length){ toast('Marque los insumos'); return; } if(!confirm('¿Borrar el consumo de '+ids.length+' insumo(s) en este mes?')) return; edSnap();
+    ids.forEach(id=>{ const it=edItem(id); if(it) delete it.d; }); guardar(); pintarEd(); toast('🧽 Consumo borrado'); },
+  eliminar(){ const ids=edMarcados(); if(!ids.length){ toast('Marque los insumos a eliminar'); return; } const m=mes(edMid());
+    if(!confirm('¿Eliminar '+ids.length+' insumo(s) de '+m.nombre+'?\nSe pierde su consumo de este mes. (Puede deshacer con ↶ Deshacer)')) return; edSnap();
+    m.items=m.items.filter(i=>!ids.includes(i.id)); ids.forEach(id=>ED.sel.delete(id)); guardar(); pintarEd(); toast('🗑️ Eliminado(s) · ↶ Deshacer para recuperar'); },
+  deshacer(){ edDeshacer(); },
+  cerrar(){ abrirCierre(); }
+};
+document.querySelector('#vistaEd .ed-tools').addEventListener('click',e=>{ const b=e.target.closest('button[data-ed]'); if(b) ED_ACC[b.dataset.ed](); });
+document.querySelectorAll('#vistaEd .ed-zoom button').forEach(b=>b.addEventListener('click',()=>{ ED.zoom=Math.min(1.6,Math.max(.7,Math.round((ED.zoom+0.1*Number(b.dataset.z))*10)/10)); try{ localStorage.setItem('bodegaEdZoom',ED.zoom); }catch(e){} pintarEd(); }));
+['edMes','edFil'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{ ED.sel.clear(); pintarEd(); }));
+document.getElementById('edBus').addEventListener('input',()=>pintarEd());
+/* --- cierre de mes: pasar existencias como inicio del mes siguiente --- */
+function asegurarMesSiguiente(mid){
+  const i=S.meses.findIndex(x=>x.id===mid); if(S.meses[i+1]) return S.meses[i+1];
+  const [y,mm]=mid.split('-').map(Number), ny=mm===12?y+1:y, nm=mm===12?1:mm+1, id=ny+'-'+String(nm).padStart(2,'0');
+  const nombres=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+  const items=mes(mid).items.map((it,k)=>{ const o={id:id+'-'+(k+1), t:it.t, n:it.n}; if(it.c) o.c=it.c; return o; });
+  const nuevo={id, nombre:nombres[nm-1]+' '+ny, items}; S.meses.push(nuevo); llenarMeses(); return nuevo;
+}
+function abrirCierre(){
+  const mid=edMid(), m=mes(mid), i=S.meses.findIndex(x=>x.id===mid), sig=S.meses[i+1], c=calcular(mid);
+  const conSaldo=m.items.filter(it=>it.t==='i' && !c[it.id].sinDatos && c[it.id].sal>0).length, neg=m.items.filter(it=>it.t==='i' && c[it.id].sal<0).length;
+  const z=document.getElementById('edCierre'); z.style.display='';
+  z.innerHTML=`<h2>📅 Cerrar ${esc(m.nombre)} y pasar existencias</h2>
+    <p>Al cerrar el mes, el <b>saldo final</b> de cada insumo queda como <b>existencia inicial</b> de <b>${sig?esc(sig.nombre):'el mes siguiente (se crea con los mismos insumos)'}</b>.
+      Insumos con existencia: <b>${conSaldo}</b>${neg?` · con saldo negativo: <b class="neg">${neg}</b> (pasan como 0)`:''}.</p>
+    <label style="display:block;margin:6px 0"><input type="radio" name="cModo" value="auto" checked> <b>Automático</b> (recomendado): la existencia inicial sigue al saldo; si corrige ${esc(m.nombre)} se actualiza sola.</label>
+    <label style="display:block;margin:6px 0"><input type="radio" name="cModo" value="fijo"> <b>Fijar</b> la existencia inicial con el saldo de hoy (queda escrita, como un conteo).</label>
+    <div class="fila" style="margin-top:8px"><button class="btn pri" id="cOk">✅ Cerrar mes</button><button class="btn" onclick="document.getElementById('edCierre').style.display='none'">Cancelar</button></div>
+    <hr style="border:0;border-top:1px solid #e3e9f2;margin:14px 0">
+    <h2 style="font-size:15px">🔁 Dar inicio de existencia a otro mes</h2>
+    <div class="fila"><div class="campo"><label>Tomar el saldo de</label><select id="cOrig">${S.meses.map(x=>`<option value="${x.id}"${x.id===mid?' selected':''}>${esc(x.nombre)}</option>`).join('')}</select></div>
+      <div class="campo"><label>como existencia inicial de</label><select id="cDest">${S.meses.map(x=>`<option value="${x.id}"${sig&&x.id===sig.id?' selected':''}>${esc(x.nombre)}</option>`).join('')}</select></div>
+      <button class="btn" id="cAplicar">Aplicar (fijar)</button></div>`;
+  z.scrollIntoView({behavior:'smooth',block:'start'});
+  document.getElementById('cOk').onclick=()=>{ const fijo=document.querySelector('input[name=cModo]:checked').value==='fijo'; const s2=asegurarMesSiguiente(mid);
+    if(fijo) fijarInicio(mid, s2.id); S.cfg.cerrados=Object.assign({},S.cfg.cerrados||{},{[mid]:new Date().toISOString()}); guardar(); guardarCarpetaAuto(true);
+    z.style.display='none'; pintarEd(); toast(`📅 ${esc(m.nombre)} cerrado. Existencias pasadas a ${esc(s2.nombre)}`,'ok'); };
+  document.getElementById('cAplicar').onclick=()=>{ const o=document.getElementById('cOrig').value, d=document.getElementById('cDest').value; if(o===d){ alert('Elija meses distintos.'); return; }
+    if(!confirm('Se escribirá como existencia inicial de '+mes(d).nombre+' el saldo final de '+mes(o).nombre+'. ¿Continuar?')) return; const n=fijarInicio(o,d); guardar(); pintarEd(); toast(`🔁 ${n} existencias iniciales fijadas en ${esc(mes(d).nombre)}`,'ok'); };
+}
+function fijarInicio(origen, destino){
+  const c=calcular(origen), porClave={}; mes(origen).items.forEach(it=>{ if(it.t==='i' && !c[it.id].sinDatos) porClave[c[it.id].clave]=Math.max(0,c[it.id].sal); });
+  let n=0; mes(destino).items.forEach(it=>{ if(it.t!=='i') return; const v=porClave[claveCadena(it)]; if(v!==undefined){ it.ini=v; n++; } }); return n;
+}
+/* --- guardado automático en la carpeta (un archivo por mes) --- */
+let ED_DIR=null, tCarpeta=null;
+async function activarCarpeta(elegir){
+  if(!window.showDirectoryPicker){ alert('Este navegador no permite guardar en carpetas. Use Microsoft Edge o Google Chrome.'); return; }
+  try{ ED_DIR=await carpetaPrincipal(elegir); await guardarCarpetaAuto(true); }catch(e){ if(e.name!=='AbortError') alert('No se pudo usar la carpeta: '+(e.message||e)); }
+}
+async function guardarCarpetaAuto(ahora){
+  if(!ED_DIR){ try{ const h=await idbGet('carpeta'); if(h && await h.queryPermission({mode:'readwrite'})==='granted') ED_DIR=h; }catch(e){} }
+  if(!ED_DIR) return estadoCarpeta();
+  clearTimeout(tCarpeta);
+  tCarpeta=setTimeout(async()=>{ try{
+      for(const mm of S.meses){ const dir=await ED_DIR.getDirectoryHandle(carpetaMes(mm.id),{create:true});
+        const datos={tipo:'bodega-mes', mes:mm.id, nombre:mm.nombre, guardado:new Date().toISOString(), items:mm.items, vales:S.vales.filter(v=>v.mes===mm.id), retiros:(S.retiros||[]).filter(r=>r.mes===mm.id)};
+        const txt=JSON.stringify(datos); if(ED_ULT[mm.id]===txt.length+':'+txt.slice(-200)) continue;
+        await escribir(dir,'Datos de la matriz '+mm.id+'.json',txt); ED_ULT[mm.id]=txt.length+':'+txt.slice(-200); }
+      const resp=await ED_DIR.getDirectoryHandle('Respaldos',{create:true}); await escribir(resp,'Respaldo '+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(S));
+      ED_CARPETA_OK=new Date(); estadoCarpeta();
+    }catch(e){ console.warn(e); ED_DIR=null; estadoCarpeta(); } }, ahora?50:2500);
+}
+let ED_ULT={}, ED_CARPETA_OK=null;
+function estadoCarpeta(){ const e=document.getElementById('edCarpeta'); if(!e) return; e.classList.toggle('on',!!ED_DIR);
+  e.innerHTML='📁 Guardado automático en carpeta: '+(ED_DIR?`<b>${esc(ED_DIR.name)}</b>${ED_CARPETA_OK?' · '+ED_CARPETA_OK.toLocaleTimeString():''}`:'<b>sin activar</b>');
+  document.getElementById('edCarpetaBtn').textContent=ED_DIR?'📁 Cambiar carpeta':'📁 Elegir / activar carpeta'; }
+document.getElementById('edCarpetaBtn').addEventListener('click',()=>activarCarpeta(!!ED_DIR));
+{ const _g=guardar; guardar=function(){ _g.apply(this,arguments); guardarCarpetaAuto(false); }; }
+
 /* ---------- FICHA DE INSUMO (agregar con datos completos) ---------- */
 let FICHA=null;
-function abrirFicha(mid, grupoId, alTerminar){
-  const m=mes(mid); FICHA={mid, alTerminar}; const d=document.getElementById('dlgFicha');
+function abrirFicha(mid, grupoId, alTerminar, editar){
+  const m=mes(mid); FICHA={mid, alTerminar, editar}; const d=document.getElementById('dlgFicha');
   const cats=m.items.filter(i=>i.t==='c');
   document.getElementById('fiGrp').innerHTML=cats.map(c=>`<option value="${c.id}"${c.id===grupoId?' selected':''}>${esc(c.n)}</option>`).join('')+'<option value="__nuevo">➕ Grupo nuevo…</option><option value="">(al final, sin grupo)</option>';
   ['fiBus','fiCod','fiNc','fiNom'].forEach(id=>document.getElementById(id).value=''); document.getElementById('fiUm').value='C/U'; document.getElementById('fiMsg').textContent='';
@@ -2104,7 +2333,13 @@ function abrirFicha(mid, grupoId, alTerminar){
   (ALMACEN_ACTUAL?ALMACEN_ACTUAL.items:[]).forEach(x=>{ if(!vistos.has(x.c)){ vistos.add(x.c); ops.push(x.c+' · '+x.d); } });
   S.meses.forEach(mm=>mm.items.forEach(i=>{ if(i.t==='i'){ const k=i.c||i.n; if(!vistos.has(k)){ vistos.add(k); ops.push((i.c?i.c+' · ':'')+i.n); } } }));
   document.getElementById('dlFicha').innerHTML=ops.map(o=>`<option value="${esc(o)}">`).join('');
-  posFicha(); d.classList.remove('hidden'); d.style.display='flex'; setTimeout(()=>document.getElementById('fiBus').focus(),50);
+  posFicha();
+  document.getElementById('fiTit').textContent = editar ? '✏️ Modificar insumo' : '➕ Agregar insumo a la matriz';
+  document.getElementById('fiGrp').disabled=!!editar; document.getElementById('fiPos').disabled=!!editar;
+  if(editar){ document.getElementById('fiCod').value=editar.c||''; document.getElementById('fiNom').value=editar.n; document.getElementById('fiNc').value=((S.cfg.nc||{})[claveCadena(editar)])||'';
+    document.getElementById('fiTodos').checked=true; document.getElementById('fiTodos').nextSibling.textContent=' Aplicar también en los meses siguientes'; }
+  else document.getElementById('fiTodos').nextSibling.textContent=' Agregar también en los meses siguientes';
+  d.classList.remove('hidden'); d.style.display='flex'; setTimeout(()=>document.getElementById(editar?'fiNom':'fiBus').focus(),50);
 }
 function cerrarFicha(){ const d=document.getElementById('dlgFicha'); d.classList.add('hidden'); d.style.display='none'; FICHA=null; }
 function posFicha(){
@@ -2121,6 +2356,12 @@ document.getElementById('fiBus').addEventListener('change',()=>{ const v=documen
   if(cod) document.getElementById('fiCod').value=cod; document.getElementById('fiNom').value=a?a.d:(mt?mt[2]:v); if(a&&a.um) document.getElementById('fiUm').value=a.um; });
 document.getElementById('fiCod').addEventListener('change',()=>{ const a=almPorCod[document.getElementById('fiCod').value.trim()]; if(a){ document.getElementById('fiNom').value=a.d; if(a.um) document.getElementById('fiUm').value=a.um; } });
 document.getElementById('fiOk').addEventListener('click',()=>{
+  if(FICHA && FICHA.editar){ const it=FICHA.editar, k0=claveCadena(it), n=document.getElementById('fiNom').value.replace(/\s+/g,' ').trim(), c=document.getElementById('fiCod').value.trim(), nc=document.getElementById('fiNc').value.trim();
+    if(!n){ document.getElementById('fiMsg').textContent='Escriba el nombre del insumo.'; return; }
+    const i0=S.meses.findIndex(x=>x.id===FICHA.mid), todos=document.getElementById('fiTodos').checked;
+    S.meses.slice(i0, todos?undefined:i0+1).forEach(mm=>mm.items.forEach(i=>{ if(i===it || (i.t==='i' && claveCadena(i)===k0)){ i.n=n; if(c) i.c=c; else delete i.c; } }));
+    S.cfg.nc=Object.assign({},S.cfg.nc||{}); if(nc) S.cfg.nc[claveCadena(it)]=nc; else delete S.cfg.nc[claveCadena(it)];
+    guardar(); const cb=FICHA.alTerminar; cerrarFicha(); if(cb) cb(it); toast('✅ Insumo modificado','ok'); return; }
   const m=mes(FICHA.mid), n=document.getElementById('fiNom').value.replace(/\s+/g,' ').trim(), c=document.getElementById('fiCod').value.trim(), msg=document.getElementById('fiMsg');
   if(!n){ msg.textContent='Escriba el nombre del insumo.'; return; }
   if(c && !/^[0-9A-Za-z-]{4,14}$/.test(c)){ msg.textContent='El código solo lleva números o letras (ej.: 10602050).'; return; }
