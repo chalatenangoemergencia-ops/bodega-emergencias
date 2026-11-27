@@ -3713,7 +3713,10 @@ const ALIAS_CADENA = {
   'C10501030':'N'+nrK('MASCARILLA DE REINHALACION RESERVORIO PARA ADMINISTRACION DE OXIGENO Y TUBO EXTENSION DE 2,1m (7 PIES),TAMAÑO INFANTIL, DESCARTABLE'),
   ['N'+nrK('ESTOQUINETE 2')]:'N'+nrK('ESTOQUINETE DE 2 PULGADAS'),
   ['N'+nrK('ESTOQUINETE 4')]:'N'+nrK('ESTOQUINETE DE 4 PULGADAS'),
-  ['N'+nrK('CATETER DE VENA CENTRAL')]:'C10605267'
+  ['N'+nrK('CATETER DE VENA CENTRAL')]:'C10605267',
+  ['N'+nrK('TIRAS PARA HEMOGLUCOTEST')]:'N'+nrK('TIRAS REACTIVAS PARA HEMOGLUCOTEST'),
+  ['N'+nrK('TUBO ENDOTRAQUEAL # 7 1/2')]:'C10611150',
+  ['N'+nrK('TEGADER')]:'C10702105'   // Tegaderm = apósito transparente
 };
 function claveCadena(i){ const k = i.c ? 'C'+String(i.c).trim() : 'N'+nrK(i.n); return ALIAS_CADENA[k]||k; }
 const numIni = it => (it.ini===undefined||it.ini===null||it.ini==='') ? null : Number(it.ini);
