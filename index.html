@@ -2947,16 +2947,17 @@ nav .fuera-area{display:none!important}
     <div class="campo" style="text-align:left;margin-bottom:12px"><label>Contraseña</label><input id="lgClave" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrar()"></div>
     <button class="btn pri" style="width:100%;padding:10px" onclick="entrar()">Entrar</button>
     <div class="fila" style="justify-content:space-between;margin-top:10px">
-      <a href="#" onclick="crearCuenta();return false">Crear cuenta</a><a href="#" onclick="olvido();return false">Olvidé mi contraseña</a></div>
+      <a href="#" onclick="mostrarCodigo();return false">🔑 Tengo un código</a><a href="#" onclick="olvido();return false">Olvidé mi contraseña</a></div>
     <div id="lgMsg" style="margin-top:12px;text-align:left"></div>
     <div id="lgCodigoBox" class="hidden" style="margin-top:12px;text-align:left;background:#f1f6ff;border:1px solid #d3e1fa;border-radius:12px;padding:12px">
-      <div style="font-weight:700;color:#173a6e;margin-bottom:6px" id="lgCodTit">📩 Escriba el código que le llegó al correo</div>
-      <input id="lgCodigo" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="••••••" style="width:100%;text-align:center;font-size:26px;letter-spacing:8px;font-weight:800;padding:10px">
-      <div class="campo hidden" id="lgNuevaC" style="margin-top:8px"><label>Nueva contraseña (10 o más, con letras y números)</label><input id="lgNueva" type="password" autocomplete="new-password"></div>
-      <button class="btn ok" style="width:100%;margin-top:8px;padding:10px" onclick="verificarCodigo()">✅ Verificar código</button>
-      <div class="fila" style="justify-content:space-between;margin-top:6px;font-size:13px"><a href="#" onclick="reenviarCodigo();return false">Reenviar código</a><a href="#" onclick="document.getElementById('lgCodigoBox').classList.add('hidden');return false">Cancelar</a></div>
+      <div style="font-weight:700;color:#173a6e;margin-bottom:4px">🔑 Activar mi cuenta con código</div>
+      <div class="muted" style="font-size:12.5px;margin-bottom:8px">Escriba arriba su <b>correo</b>, aquí el <b>código de 6 números</b> que le dio su jefatura y cree su contraseña.</div>
+      <input id="lgCodigo" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="••• •••" style="width:100%;text-align:center;font-size:26px;letter-spacing:8px;font-weight:800;padding:10px">
+      <div class="campo" style="margin-top:8px"><label>Cree su contraseña (10 o más, con letras y números)</label><input id="lgNueva" type="password" autocomplete="new-password"></div>
+      <div class="campo"><label>Repita la contraseña</label><input id="lgNueva2" type="password" autocomplete="new-password" onkeydown="if(event.key==='Enter')verificarCodigo()"></div>
+      <button class="btn ok" style="width:100%;margin-top:8px;padding:10px" onclick="verificarCodigo()">✅ Activar y entrar</button>
+      <div class="fila" style="justify-content:space-between;margin-top:6px;font-size:12.5px"><span class="muted">¿No tiene código? Pídalo a su jefatura o encargado.</span><a href="#" onclick="document.getElementById('lgCodigoBox').classList.add('hidden');return false">Cancelar</a></div>
     </div>
-    <div style="margin-top:8px;font-size:12.5px"><a href="#" onclick="mostrarCodigo('signup');return false">Ya tengo un código</a></div>
   </div>
 </div>
 <div id="cargando" class="hidden" style="position:fixed;inset:0;background:rgba(243,245,249,.9);z-index:90;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--azul)">⟳ Cargando información en línea…</div>
@@ -7220,7 +7221,7 @@ async function pintarUsuarios(){
       SOY_ADMIN?`<button class="btn sm" onclick="cambiarRol('${e}',${!u.admin})">${u.admin?'Quitar administrador':'Hacer administrador'}</button>`:'',
       SOY_ADMIN&&!u.admin?`<button class="btn sm" onclick="cambiarEncargado('${e}',${!u.puede_invitar})">${u.puede_invitar?'Quitar encargado':'Hacer encargado/a'}</button>`:'',
       !u.admin&&!u.puede_invitar?`<button class="btn sm" onclick="cambiarSolo('${e}',${!u.solo_solicitud})">${u.solo_solicitud?'Dar acceso completo':'Solo solicitudes'}</button>`:'',
-      !u.ultimo_acceso?`<button class="btn sm" onclick="enviarInvitacion('${e}')">📩 Reenviar invitación</button>`:'',
+      `<button class="btn sm" onclick="enviarInvitacion('${e}','${esc(u.nombre||'')}')" title="Para la primera entrada o si olvidó su contraseña">🔑 ${u.ultimo_acceso?'Código nuevo':'Invitación con código'}</button>`,
       `<button class="btn del sm" onclick="quitarUsuario('${e}')">Quitar acceso</button>`].filter(Boolean).join(' '));
     const areas=u.admin?'<span class="pf-area">Todas</span>':`<span class="us-areas">${Object.entries(AREA_N).map(([k,n])=>`<label><input type="checkbox" value="${k}" ${ar.includes(k)?'checked':''} ${puedeTocar?'':'disabled'} onchange="guardarAreas('${e}',this)">${n}</label>`).join('')}</span>`;
     const usu=`<div class="us-u"><div class="pf-av" style="width:32px;height:32px">${avatarIn(u.nombre||u.email,u.foto)}${on?'<span class="on"></span>':''}</div><div><b>${esc(u.nombre||u.email.replace(/@.*/,''))}</b><small>${e}${u.cargo?' · '+esc(u.cargo):''}${u.invitado_por?' · dio acceso: '+esc(u.invitado_por):''}</small></div></div>`;
@@ -7231,11 +7232,24 @@ async function pintarUsuarios(){
   ['nuevoAdmin','nuevoEnc'].forEach(id=>{ const x=document.getElementById(id); if(x) x.parentNode.classList.toggle('hidden',!SOY_ADMIN); });
   const n=document.getElementById('notaUsuario'); if(n) n.classList.toggle('hidden',PUEDO_INVITAR);
 }
-/* invitación: le llega un correo con su código para entrar (luego pone su contraseña) */
-async function enviarInvitacion(em, silencio){
-  const {error}=await sb.auth.signInWithOtp({email:em, options:{shouldCreateUser:true, emailRedirectTo:location.origin+location.pathname}});
-  if(error){ if(!silencio||true) alert('El acceso quedó dado, pero no se pudo enviar el correo ahora ('+error.message+').\nPuede pulsar “Reenviar invitación” más tarde, o la persona puede entrar a la página y elegir “Crear cuenta”.'); return false; }
-  toast('📩 Invitación con código enviada a '+esc(em),'ok'); return true; }
+/* invitación: el sistema genera un código de 6 números y arma el correo profesional (sale desde el correo de quien invita) */
+const URL_APP='https://chalatenangoemergencia-ops.github.io/bodega-emergencias/';
+async function enviarInvitacion(em, nombre){
+  const {data:cod,error}=await sb.rpc('generar_codigo_acceso',{p_email:em}); if(error){ alert('No se pudo generar el código: '+error.message); return; }
+  const c=String(cod), cc=c.slice(0,3)+' '+c.slice(3), quien=(MI_PERFIL&&MI_PERFIL.nombre)||usuario.email, cargo=(MI_PERFIL&&MI_PERFIL.cargo)||'';
+  const asunto='Invitación al Sistema de Bodega de Emergencias';
+  const cuerpo=`Hola${nombre?' '+nombre:''}:\n\nSe le dio acceso al Sistema de Bodega de Emergencias del Hospital Nacional Dr. Luis Edmundo Vásquez, Chalatenango.\n\n   SU CÓDIGO DE ACTIVACIÓN:  ${cc}\n   (válido por 7 días)\n\nPara entrar por primera vez:\n  1. Abra: ${URL_APP}\n  2. Toque "Tengo un código".\n  3. Escriba su correo (${em}), el código y cree su contraseña.\n\nEn el celular puede instalarlo como app: menú ☰ → "Instalar en este celular".\n\nEste código es personal: no lo comparta con nadie.\n\nAtentamente,\n${quien}${cargo?'\n'+cargo:''}\nSistema de Bodega de Emergencias`;
+  const ya=document.getElementById('invDlg'); if(ya) ya.remove();
+  const d=document.createElement('div'); d.id='invDlg'; d.className='inv-dlg';
+  d.innerHTML=`<div class="pf-cab"><div class="pf-av g">${avatarIn(nombre||em,null)}</div><div><b>Invitación lista</b><small>${esc(nombre||'')} ${esc(em)}</small></div></div>
+    <div class="pf-sec" style="text-align:center"><h4>Código de activación (válido 7 días)</h4><div style="display:inline-block;background:#f1f6ff;border:2px dashed #2f5ea8;border-radius:14px;padding:10px 22px;font:800 32px 'Courier New',monospace;letter-spacing:8px;color:#0d2347">${cc}</div>
+      <div class="muted" style="font-size:12px;margin-top:6px">Envíelo a la persona. Con él activa su cuenta y crea su contraseña.</div></div>
+    <div class="pf-acc" style="justify-content:center"><a class="btn pri" id="invMail" href="mailto:${encodeURIComponent(em)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}">📧 Enviar por correo</a>
+      <a class="btn ok" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(cuerpo)}">💬 WhatsApp</a><button class="btn" id="invCopiar">📋 Copiar mensaje</button><button class="btn" id="invX">Cerrar</button></div>`;
+  document.body.appendChild(d);
+  d.querySelector('#invCopiar').onclick=async()=>{ try{ await navigator.clipboard.writeText(cuerpo); toast('📋 Mensaje copiado: péguelo en el correo o chat','ok'); }catch(e){ prompt('Copie el mensaje:',cuerpo); } };
+  d.querySelector('#invX').onclick=()=>d.remove();
+  pintarUsuarios(); return true; }
 async function agregarUsuario(){
   if(!PUEDO_INVITAR){ alert('Solo el administrador o un encargado pueden dar acceso.'); return; }
   const em=document.getElementById('nuevoCorreo').value.trim().toLowerCase(), nom=document.getElementById('nuevoNombre').value.trim();
@@ -7245,7 +7259,7 @@ async function agregarUsuario(){
   if(error){ alert(/duplicate|unique/i.test(error.message)?'Ese correo ya tiene acceso.':'No se pudo agregar: '+error.message); return; }
   ['nuevoCorreo','nuevoNombre'].forEach(id=>document.getElementById(id).value=''); ['nuevoAdmin','nuevoEnc','nuevoSolo'].forEach(id=>{ const x=document.getElementById(id); if(x) x.checked=false; });
   pintarUsuarios();
-  if(confirm('✅ Acceso dado a '+em+'.\n\n¿Enviarle ahora la invitación por correo con su código para entrar?')) enviarInvitacion(em);
+  toast('✅ Acceso dado a '+esc(em),'ok'); enviarInvitacion(em, nom);
 }
 async function cambiarEncargado(em, on){ if(!confirm(on?'¿Hacer encargado/a a '+em+'? Podrá dar y quitar acceso a usuarios comunes.':'¿Quitar el rol de encargado/a a '+em+'?')) return;
   const {error}=await sb.from('usuarios_permitidos').update({puede_invitar:on, admin:false, solo_solicitud:false}).eq('email',em); if(error) alert(error.message); pintarUsuarios(); }
@@ -7266,7 +7280,7 @@ async function entrar(){ const em=document.getElementById('lgCorreo').value.trim
   const {error}=await sb.auth.signInWithPassword({email:em,password:pw});
   if(error){ const n=Number(sessionStorage.getItem('bodegaFallos')||0)+1; sessionStorage.setItem('bodegaFallos',n);
     if(n>=5){ sessionStorage.setItem('bodegaBloqueo',Date.now()+60000*Math.min(10,n-4)); sessionStorage.setItem('bodegaFallos',0); }
-    if(error.message.includes('Email not confirmed')){ msgLogin('Primero confirme su correo con el <b>código</b> que le llegó (o el botón del correo).'); mostrarCodigo('signup'); } else msgLogin('Correo o contraseña incorrectos.'); }
+    if(error.message.includes('Email not confirmed')){ msgLogin('Su cuenta aún no está activa: use el <b>código</b> que le dio su jefatura.'); mostrarCodigo(); } else msgLogin('Correo o contraseña incorrectos. Si es la primera vez, toque <b>“Tengo un código”</b>.'); }
   else sessionStorage.removeItem('bodegaFallos');
 }
 async function crearCuenta(){ const em=document.getElementById('lgCorreo').value.trim(), pw=document.getElementById('lgClave').value;
@@ -7275,24 +7289,22 @@ async function crearCuenta(){ const em=document.getElementById('lgCorreo').value
   if(error){ msgLogin(/autorizado/i.test(error.message)?'🔒 Este correo no está autorizado. Pida al administrador que le dé acceso.':'No se pudo crear: '+esc(error.message)); return; }
   if(data.session) return; msgLogin('✅ Cuenta creada. <b>Revise su correo</b>: le enviamos un <b>código</b> (escríbalo abajo) o un botón para confirmar.',true); mostrarCodigo('signup');
 }
-/* verificación con el código que llega al correo */
-let LG_TIPO='signup';
-function mostrarCodigo(tipo){ LG_TIPO=tipo; const b=document.getElementById('lgCodigoBox'); b.classList.remove('hidden'); document.getElementById('lgNuevaC').classList.toggle('hidden',tipo!=='recovery');
-  document.getElementById('lgCodTit').textContent=tipo==='recovery'?'🔑 Escriba el código del correo y su nueva contraseña':'📩 Escriba el código que le llegó al correo'; document.getElementById('lgCodigo').value=''; setTimeout(()=>document.getElementById('lgCodigo').focus(),50); }
-async function verificarCodigo(){ const em=document.getElementById('lgCorreo').value.trim(), tk=document.getElementById('lgCodigo').value.replace(/\D/g,'');
-  if(!em){ msgLogin('Escriba su correo arriba.'); return; } if(tk.length<6){ msgLogin('Escriba el código completo que le llegó al correo.'); return; }
-  let pw=''; if(LG_TIPO==='recovery'){ pw=document.getElementById('lgNueva').value; if(pw.length<10||!/[A-Za-z]/.test(pw)||!/\d/.test(pw)){ msgLogin('La nueva contraseña debe tener al menos 10 caracteres, con letras y números.'); return; } }
-  msgLogin('Verificando…',true);
-  let {error}=await sb.auth.verifyOtp({email:em, token:tk, type:LG_TIPO==='recovery'?'recovery':'email'});
-  if(error && LG_TIPO!=='recovery'){ const r2=await sb.auth.verifyOtp({email:em, token:tk, type:'signup'}); error=r2.error; }
-  if(error){ msgLogin('El código no es válido o ya venció. Pida uno nuevo con “Reenviar código”.'); return; }
-  if(LG_TIPO==='recovery'){ const r=await sb.auth.updateUser({password:pw}); if(r.error){ msgLogin('No se pudo cambiar la contraseña: '+esc(r.error.message)); return; } toast('✅ Contraseña cambiada','ok'); }
-  document.getElementById('lgCodigoBox').classList.add('hidden'); msgLogin('✅ Listo, entrando…',true); }
-async function reenviarCodigo(){ const em=document.getElementById('lgCorreo').value.trim(); if(!em){ msgLogin('Escriba su correo arriba.'); return; }
-  const {error}=LG_TIPO==='recovery'?await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname}):await sb.auth.signInWithOtp({email:em,options:{shouldCreateUser:true,emailRedirectTo:location.origin+location.pathname}});
-  msgLogin(error?'No se pudo reenviar: '+esc(error.message)+' (espere un minuto e intente de nuevo).':'📩 Le enviamos un código nuevo al correo.',!error); }
-async function olvido(){ const em=document.getElementById('lgCorreo').value.trim(); if(!em){ msgLogin('Escriba su correo arriba y vuelva a pulsar “Olvidé mi contraseña”.'); return; }
-  const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname}); msgLogin(error?esc(error.message):'📩 Le enviamos un <b>código</b> al correo para cambiar la contraseña. Escríbalo abajo con su contraseña nueva.',!error); if(!error) mostrarCodigo('recovery'); }
+/* activar la cuenta (o poner contraseña nueva) con el código que da la jefatura */
+function mostrarCodigo(){ const b=document.getElementById('lgCodigoBox'); b.classList.remove('hidden'); document.getElementById('lgCodigo').value='';
+  setTimeout(()=>(document.getElementById('lgCorreo').value.trim()?document.getElementById('lgCodigo'):document.getElementById('lgCorreo')).focus(),50); }
+async function verificarCodigo(){ const em=document.getElementById('lgCorreo').value.trim().toLowerCase(), tk=document.getElementById('lgCodigo').value.replace(/\D/g,''),
+    pw=document.getElementById('lgNueva').value, pw2=document.getElementById('lgNueva2').value;
+  if(!em){ msgLogin('Escriba su correo arriba.'); document.getElementById('lgCorreo').focus(); return; }
+  if(tk.length!==6){ msgLogin('El código tiene 6 números.'); return; }
+  if(pw.length<10||!/[A-Za-z]/.test(pw)||!/\d/.test(pw)){ msgLogin('La contraseña debe tener al menos 10 caracteres, con letras y números.'); return; }
+  if(pw!==pw2){ msgLogin('Las contraseñas no coinciden.'); return; }
+  msgLogin('Activando…',true);
+  try{ const r=await fetch(SB_URL+'/functions/v1/activar-cuenta',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({email:em,codigo:tk,password:pw})});
+    const d=await r.json().catch(()=>({})); if(!r.ok||!d.ok){ msgLogin('🔒 '+esc(d.error||'No se pudo activar. Intente de nuevo.')); return; }
+    const {error}=await sb.auth.signInWithPassword({email:em,password:pw}); if(error){ msgLogin('Cuenta lista, pero no se pudo entrar: '+esc(error.message)); return; }
+    document.getElementById('lgCodigoBox').classList.add('hidden'); msgLogin('✅ ¡Listo! Entrando…',true);
+  }catch(e){ msgLogin('Sin conexión. Revise el internet e intente de nuevo.'); } }
+async function olvido(){ msgLogin('🔑 Pida a su <b>jefatura o encargado</b> un <b>código nuevo</b> (lo generan en “Respaldo y ajustes → Usuarios”). Luego toque <b>“Tengo un código”</b>, escriba su correo, el código y su contraseña nueva.',true); mostrarCodigo(); }
 async function salir(){ await sb.auth.signOut(); location.reload(); }
 let iniciado=false;
 async function arrancar(session){
@@ -7368,6 +7380,8 @@ const AREA_N={bod:'📦 Bodega', enf:'👩‍⚕️ Enfermería', inf:'📑 Info
 .pf-av .on{position:absolute;right:-1px;bottom:-1px;width:9px;height:9px;border-radius:50%;background:#2fd47a;box-shadow:0 0 0 2px #173a6e}
 .pf-chip .t{line-height:1.1;text-align:left}.pf-chip .t b{font-size:12.5px;display:block;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pf-chip .t small{font-size:10.5px;color:#b9cdea}
 .pf-panel{position:fixed;top:54px;right:12px;width:360px;max-height:calc(100vh - 70px);overflow:auto;background:#fff;color:#18233a;border-radius:16px;box-shadow:0 20px 60px rgba(5,15,35,.35);z-index:200;animation:entrar .2s ease}
+.inv-dlg{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(460px,calc(100vw - 16px));max-height:90vh;overflow:auto;background:#fff;color:#18233a;border-radius:16px;box-shadow:0 20px 60px rgba(5,15,35,.45);z-index:600}
+.inv-dlg .pf-acc .btn{flex:1 1 40%;text-align:center;text-decoration:none}
 .pf-cab{display:flex;gap:12px;align-items:center;padding:16px;background:linear-gradient(120deg,#0d2347,#1d5f8f);color:#fff;border-radius:16px 16px 0 0}
 .pf-cab b{font-size:15px}.pf-cab small{color:#b9cdea;display:block}
 .pf-sec{padding:10px 16px;border-bottom:1px solid #eef2f8}.pf-sec h4{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:#7b8aa3}
