@@ -269,6 +269,17 @@ table.grid th{background:linear-gradient(180deg,#2f5ea8,#24508f)}
 #zonaArchivo:hover,#reZonaArch:hover{transform:translateY(-2px);box-shadow:var(--sombra2)}
 .toast{position:fixed;right:22px;bottom:22px;z-index:2000;background:#10284f;color:#fff;padding:12px 18px;border-radius:12px;box-shadow:var(--sombra2);font-size:13.5px;animation:toastIn .35s cubic-bezier(.2,.7,.2,1);max-width:420px}
 .toast.ok{background:linear-gradient(135deg,#12925f,#0e7a4f)}
+.campana{position:relative;margin-left:auto;margin-right:10px}
+.campana-btn{position:relative;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.12);font-size:18px;cursor:pointer;transition:background .2s,transform .15s}
+.campana-btn:hover{background:rgba(255,255,255,.22);transform:rotate(-12deg)}
+.campana-punto{position:absolute;top:6px;right:7px;width:10px;height:10px;border-radius:50%;background:#ff4d6d;box-shadow:0 0 0 2px #173a6e;animation:latido 1.6s ease-in-out infinite}
+@keyframes latido{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+.campana-panel{position:absolute;right:0;top:48px;width:380px;max-height:70vh;overflow:auto;background:#fff;color:#18233a;border-radius:14px;box-shadow:0 18px 50px rgba(5,15,35,.35);padding:10px;z-index:50;animation:entrar .25s ease}
+.campana-tit{font-weight:800;color:#173a6e;padding:6px 8px 10px;border-bottom:1px solid #e6ecf4;margin-bottom:6px}
+.campana-item{display:flex;gap:10px;padding:8px;border-radius:10px;font-size:13px;line-height:1.35}.campana-item:hover{background:#f3f7ff}
+.campana-item span{font-size:20px}.campana-item small{color:#5d6b82}
+header.app #btnSyncTop{margin-left:0!important}
+
 #usuarioTop{color:#cfe0f7;font-size:12px;margin-top:3px}#usuarioTop a{color:#fff;font-weight:700;background:rgba(255,255,255,.14);padding:2px 10px;border-radius:999px;text-decoration:none;margin-left:4px}#usuarioTop a:hover{background:rgba(255,255,255,.26)}
 @keyframes toastIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
 #login,#sinAcceso,#importar{background:linear-gradient(135deg,#0b1f40 0%,#173a6e 45%,#1d5f8f 100%)!important;overflow:hidden}
@@ -3247,14 +3258,29 @@ new MutationObserver(ms=>{ const vistos=new Set(); ms.forEach(m=>{ if(m.target.c
   new MutationObserver(()=>{ const t=e.textContent; if(t!==ult && /Guardado|Sincronizado/.test(t)){ e.classList.remove('pulso'); void e.offsetWidth; e.classList.add('pulso'); } ult=t; }).observe(e,{childList:true,characterData:true,subtree:true}); })();
 if(window.top!==window.self){ try{ window.top.location=window.location.href; }catch(e){ document.documentElement.innerHTML=''; } }
 const VERSION_PROG='27/11/2026';
-function avisoNovedades(){ document.getElementById('verTxt').textContent='Versión '+VERSION_PROG;
+const NOVEDADES=[
+  ['🧮','Editar matriz','Sección grande para trabajar la matriz: agregar, modificar, mover, ordenar, eliminar, deshacer y cerrar el mes.'],
+  ['📄','Cargar matriz desde PDF','En Respaldo y ajustes: lea el PDF de la matriz y se cargan insumos, existencias, ingresos y consumos.'],
+  ['🧾','Recepción de insumos','Vale por PDF o foto, insumos nuevos con código y recibo numerado.'],
+  ['📤','Retiros de bodega','Hojas diarias con N° correlativo, código y lectura por foto.'],
+  ['📊','Existencias','La existencia pasa sola de un mes al siguiente.'],
+  ['🛡️','Antisoborno','Informe mensual con señales de alerta.'],
+  ['🖨️','Documentos','Kardex, existencias, recibos, control de retiros, antisoborno e informe para auditoría.'],
+  ['✨','Diseño moderno','Menú lateral, encabezado fijo en la matriz y resaltado de fila y columna.']];
+function avisoNovedades(){
+  document.getElementById('verTxt').textContent='Versión '+VERSION_PROG;
+  if(document.getElementById('campana')) return;
   let vista=''; try{ vista=localStorage.getItem('bodegaVersionVista')||''; }catch(e){}
-  if(vista===VERSION_PROG) return; try{ localStorage.setItem('bodegaVersionVista',VERSION_PROG); }catch(e){}
-  const d=document.createElement('div'); d.className='aviso no-print'; d.style.cssText='margin:10px 16px;font-size:13.5px';
-  d.innerHTML=`<b>✅ Programa actualizado a la versión ${VERSION_PROG}.</b> Novedades: menú <b>🧾 Recepción de insumos</b>, <b>📤 Retiros de bodega</b> (hojas diarias con N° correlativo y lectura por foto),
-    <b>📊 Existencias</b>, <b>🛡️ Antisoborno</b>; en <b>🖨️ Documentos</b>: tarjetas de control (kardex), existencias, recibos, control de retiros, informe antisoborno e <b>informe para auditoría</b>.
-    En la matriz el encabezado queda fijo y se resaltan la fila y la columna donde escribe. <button class="btn sm" onclick="this.parentNode.remove()">Entendido</button>`;
-  document.querySelector('main').prepend(d);
+  const hdr=document.querySelector('header.app'), ref=document.getElementById('btnSyncTop');
+  const w=document.createElement('div'); w.id='campana'; w.className='campana no-print';
+  w.innerHTML=`<button class="campana-btn" title="Novedades del programa" aria-label="Novedades">🔔${vista===VERSION_PROG?'':'<span class="campana-punto"></span>'}</button>
+    <div class="campana-panel hidden"><div class="campana-tit">Novedades · versión ${VERSION_PROG}</div>
+    ${NOVEDADES.map(n=>`<div class="campana-item"><span>${n[0]}</span><div><b>${n[1]}</b><br><small>${n[2]}</small></div></div>`).join('')}</div>`;
+  hdr.insertBefore(w, ref);
+  const btn=w.querySelector('.campana-btn'), pan=w.querySelector('.campana-panel');
+  btn.addEventListener('click',e=>{ e.stopPropagation(); pan.classList.toggle('hidden'); const p=w.querySelector('.campana-punto'); if(p) p.remove();
+    try{ localStorage.setItem('bodegaVersionVista',VERSION_PROG); }catch(e){} });
+  document.addEventListener('click',e=>{ if(!w.contains(e.target)) pan.classList.add('hidden'); });
 }
 /* ================= VERSIÓN EN LÍNEA (Supabase) ================= */
 const SB_URL='https://djieropayuzlwjuegopb.supabase.co', SB_KEY='sb_publishable_trj7n_Oco0odCJ0-ln9bBQ_o0Zly5jF';
