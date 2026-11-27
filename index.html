@@ -5140,7 +5140,7 @@ async function importarMatrizPDFLocal(inp){
       if(ex){ ex.items=x.mes.items; S.vales=S.vales.filter(v=>v.mes!==x.mes.id); }
       else { S.meses.push(x.mes); S.meses.sort((a,b)=>a.id<b.id?-1:1); }
       S.vales.push(...x.vales); guardar(); llenarMeses();
-      msg.innerHTML=`<span class="ok-msg">✅ ${esc(x.mes.nombre)} cargado desde el ${origen}: ${nIns} insumos, ${x.vales.reduce((s,v)=>s+v.lineas.length,0)} ingresos.${r.malos.length?` ⚠️ ${r.malos.length} fila(s) cuyo total no coincide con los días: revíselas.`:' Todos los totales coinciden con el ${origen}.'}</span>`;
+      msg.innerHTML=`<span class="ok-msg">✅ ${esc(x.mes.nombre)} cargado desde el ${origen}: ${nIns} insumos, ${x.vales.reduce((s,v)=>s+v.lineas.length,0)} ingresos.${r.malos.length?` ⚠️ ${r.malos.length} fila(s) cuyo total no coincide con los días: revíselas.`:' Todos los totales coinciden con los días.'}</span>`;
     }catch(e){ msg.innerHTML='<span class="neg">'+esc(f.name)+': '+esc(e.message||e)+'</span>'; }
   }
 }
