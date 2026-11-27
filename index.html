@@ -3215,7 +3215,7 @@ nav .fuera-area{display:none!important}
       <b>2.</b> El personal anota lo que retira, el servicio, la fecha y firma. <b>3.</b> Registre aquí la hoja: el programa <b>descuenta</b> esas cantidades
       (las suma al consumo de ese día en la matriz), actualiza la existencia y guarda <b>quién sacó qué</b> para el control del mes.</p>
     <div class="fila">
-      <div class="campo"><label>Hojas de pedido</label><select id="rtHModo"><option value="mes">Todo el mes: una hoja por día</option><option value="dia">Solo un día</option></select></div>
+      <div class="campo"><label>Hojas de pedido</label><select id="rtHModo"><option value="mes">Todo el mes: una hoja por día</option><option value="dia">Solo un día</option><option value="generica">Genérica sin número ni fecha (para fotocopiar)</option></select></div>
       <div class="campo"><label>Mes</label><select id="rtHMes" class="selMes"></select></div>
       <div class="campo" id="rtHFechaC" style="display:none"><label>Fecha</label><input type="date" id="rtHFecha"></div>
       <button class="btn pri" id="rtImprimir">🖨️ 1. Imprimir hojas de pedido</button>
@@ -4873,7 +4873,7 @@ function folioDeFecha(fecha, asignar){ S.cfg=S.cfg||{}; const F=S.cfg.hpFol||{};
 function docHojaPedido(mid){
   const m=mes(mid), c=calcular(mid), disp=false, its=m.items.filter(i=>i.t==='i');   // la hoja solo lleva el espacio para la cantidad retirada
   const modo=document.getElementById('rtHModo').value, fsel=document.getElementById('rtHFecha').value;
-  const dias = (modo==='dia' && fsel && fsel.slice(0,7)===mid) ? [Number(fsel.slice(8,10))] : Array.from({length:diasDelMes(mid)},(_,k)=>k+1);
+  const dias = modo==='generica' ? [0] : (modo==='dia' && fsel && fsel.slice(0,7)===mid) ? [Number(fsel.slice(8,10))] : Array.from({length:diasDelMes(mid)},(_,k)=>k+1);
   const serv=(S.cfg&&S.cfg.uni)||'EMERGENCIA', DSEM=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
   const lista=[...its, ...Array(4).fill(null)], pags=[], resto=lista.slice();
   while(resto.length>HG.ULT*2) pags.push(resto.splice(0, Math.min(HG.FULL*2, resto.length)));
@@ -4889,20 +4889,21 @@ function docHojaPedido(mid){
   const cel=(x,y,w,h,txt,cls)=>`<div class="hc ${cls||''}" style="left:${x}px;top:${y}px;width:${w+1}px;height:${h+1}px">${txt||''}</div>`;
   const encab=x=>cel(x,HG.YH,HG.CW,HG.HH,'CÓDIGO','hh')+cel(x+HG.CW,HG.YH,NW,HG.HH,'INSUMO','hh')+(disp?cel(x+HG.CW+NW,HG.YH,DW,HG.HH,'DISPO-<br>NIBLE','hh hh2'):'')+cel(XQ(x),HG.YH,HG.QW,HG.HH,'CANTIDAD<br>RETIRADA','hh hh2');
   const html=dias.map(dia=>{
-    const fecha=mid+'-'+String(dia).padStart(2,'0'), [y,mm]=mid.split('-').map(Number), ds=DSEM[new Date(y,mm-1,dia).getDay()];
-    if(!folioDeFecha(fecha)) nuevoFolio=true; const fol=folioDeFecha(fecha,true);
+    const gen=dia===0;   // hoja genérica: sin número ni fecha, para fotocopiar y llenar a mano
+    const fecha=gen?'':mid+'-'+String(dia).padStart(2,'0'), [y,mm]=mid.split('-').map(Number), ds=gen?'':DSEM[new Date(y,mm-1,dia).getDay()];
+    if(!gen && !folioDeFecha(fecha)) nuevoFolio=true; const fol=gen?null:folioDeFecha(fecha,true);
     return pags.map((pg,n)=>{ const ult=n===nPag-1, filas=ult?Math.ceil(pg.length/2):HG.FULL;
       let h=`<div class="hp">`+`<div class="mk" style="left:0;top:0"></div><div class="mk" style="right:0;top:0"></div><div class="mk" style="left:0;bottom:0"></div><div class="mk" style="right:0;bottom:0"></div>`+
-        bitsHoja(plant,dia,n).map((b,i)=>`<div class="bit${b?' on':''}" style="left:${HP.BX0+i*HP.BPASO}px"></div>`).join('')+
-        `<span class="lect">No tape los cuadros negros: sirven para leer esta hoja desde una foto.</span>
+        (gen?'':bitsHoja(plant,dia,n).map((b,i)=>`<div class="bit${b?' on':''}" style="left:${HP.BX0+i*HP.BPASO}px"></div>`).join(''))+
+        (gen?'':`<span class="lect">No tape los cuadros negros: sirven para leer esta hoja desde una foto.</span>`)+`
         <div class="htit">HOSPITAL NACIONAL Dr. LUIS EDMUNDO VASQUEZ,<br>CHALATENANGO,&nbsp;&nbsp;&nbsp; SERVICIO: EMERGENCIA</div>
-        <div class="hfol">HOJA N° <b>${String(fol).padStart(5,'0')}</b><br><span>FECHA: <b>${fmtFecha(fecha)}</b> (${ds}) · pág. ${n+1} de ${nPag}</span></div>`;
+        ${gen?`<div class="hfol">HOJA N° ____________<br><span>FECHA: ____ / ____ / ________${nPag>1?' · pág. '+(n+1)+' de '+nPag:''}</span></div>`:`<div class="hfol">HOJA N° <b>${String(fol).padStart(5,'0')}</b><br><span>FECHA: <b>${fmtFecha(fecha)}</b> (${ds}) · pág. ${n+1} de ${nPag}</span></div>`}`;
       for(let col=0;col<2;col++){ const x=HG.COLX[col], nr=col?Math.max(0,(ult?pg.length:HG.FULL*2)-filas):filas; if(nr<=0 && col) continue; h+=encab(x);
         for(let r=0;r<(col?Math.max(nr, ult?filas:HG.FULL):filas);r++){ const j=col?filas+r:r, i=pg[j], yy=HG.Y1+r*HG.RH; let nom='&nbsp;', cod='', dt='';
           if(i){ nom=esc(nombreHoja(i)); cod=esc(i.c||''); if(disp){ const xx=c[i.id], sd=xx.sinDatos||xx.incompleto, dd=sd?null:dispDia(mid,i,xx,dia); dt=dd===null||dd<0?'':(dd===0?'<span class="ag">AGOTADO</span>':fmt(dd)); } }
           h+=cel(x,yy,HG.CW,HG.RH,cod,'hk')+cel(x+HG.CW,yy,NW,HG.RH,nom,'hn')+(disp?cel(x+HG.CW+NW,yy,DW,HG.RH,dt,'hd'):'')+cel(XQ(x),yy,HG.QW,HG.RH,'','hq'); } }
       if(ult){ const y0=HG.Y1+filas*HG.RH+30, L=(k,yy,x0,txt)=>`<div class="hl" style="top:${yy}px"><b>${k}</b><span style="left:${x0}px">${txt||''}</span></div>`;
-        h+=L('SERVICIO:',y0,110,esc(serv))+L('FECHA:',y0+48,85,fmtFecha(fecha))+L('RESPONSABLE (nombre de quien retira):',y0+96,290,'')+L('FIRMA:',y0+144,80,'')+
+        h+=L('SERVICIO:',y0,110,esc(serv))+L('FECHA:',y0+48,85,gen?'':fmtFecha(fecha))+L('RESPONSABLE (nombre de quien retira):',y0+96,290,'')+L('FIRMA:',y0+144,80,'')+
           `<div class="hsel" style="top:${y0-4}px"><i>SELLO</i></div>
           <div style="position:absolute;left:36px;top:${y0+200}px;font:10px Arial;color:#555">${disp?'“Disponible” = existencia al inicio del día según el sistema (impreso el '+new Date().toLocaleDateString('es-SV')+'). ':''}Escriba en “CANTIDAD RETIRADA” el número que retira. Al registrar esta hoja se descuenta de la existencia.</div>`; }
       return h+'</div>'; }).join(''); }).join('');
