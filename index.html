@@ -563,7 +563,6 @@ header.app #btnSyncTop{margin-left:0!important}
       <button class="btn pri" id="rtImprimir">🖨️ 1. Imprimir hojas de pedido</button>
       <button class="btn ok" id="rtNuevo">✍️ 2. Registrar una hoja llenada (descontar)</button>
       <label class="btn ok">📷 Subir fotos o PDF de hojas llenadas<input type="file" id="rtFotos" multiple accept=".pdf,image/*" class="hidden"></label>
-      <label style="font-size:13px"><input type="checkbox" id="rtDisp" checked> Mostrar existencia disponible (al inicio de cada día)</label>
       <button class="btn sm" id="rtNombres">Nombres en la hoja…</button>
     </div>
   </div>
@@ -2040,7 +2039,7 @@ function capturarPlantilla(){
 function folioDeFecha(fecha, asignar){ S.cfg=S.cfg||{}; const F=S.cfg.hpFol||{}; if(F[fecha]) return F[fecha]; if(!asignar) return null;
   const n=sigFolio(); S.cfg.hpFol=Object.assign({},F,{[fecha]:n}); return n; }
 function docHojaPedido(mid){
-  const m=mes(mid), c=calcular(mid), disp=document.getElementById('rtDisp').checked, its=m.items.filter(i=>i.t==='i');
+  const m=mes(mid), c=calcular(mid), disp=false, its=m.items.filter(i=>i.t==='i');   // la hoja solo lleva el espacio para la cantidad retirada
   const modo=document.getElementById('rtHModo').value, fsel=document.getElementById('rtHFecha').value;
   const dias = (modo==='dia' && fsel && fsel.slice(0,7)===mid) ? [Number(fsel.slice(8,10))] : Array.from({length:diasDelMes(mid)},(_,k)=>k+1);
   const serv=(S.cfg&&S.cfg.uni)||'EMERGENCIA', DSEM=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
