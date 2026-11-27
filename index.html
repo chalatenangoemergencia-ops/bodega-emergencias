@@ -2974,7 +2974,7 @@ nav .fuera-area{display:none!important}
   <p>La base de datos está vacía. Puede cargar:</p>
   <ul style="margin:6px 0 12px;padding-left:20px;line-height:1.6"><li>📄 El <b>PDF de la Matriz de entradas y salidas</b> (uno o varios meses a la vez), o</li>
     <li>💾 el archivo <b>“Datos iniciales Bodega Emergencias.json”</b> o un respaldo del programa de la PC.</li></ul>
-  <label class="btn pri">📂 Elegir PDF o archivo…<input type="file" accept=".pdf,application/pdf,.json" multiple class="hidden" onchange="importarInicial(this)"></label>
+  <label class="btn pri">📂 Elegir PDF o archivo…<input type="file" accept=".pdf,application/pdf,.json,.xlsx,.xltx,.xlsm" multiple class="hidden" onchange="importarInicial(this)"></label>
   <div id="msgImportar" style="margin-top:10px"></div></div>
 </div>
 <header class="app">
@@ -3548,9 +3548,9 @@ nav .fuera-area{display:none!important}
     <div id="msgUSB" style="margin-top:10px"></div>
   </div>
   <div class="panel">
-    <h2>📄 Cargar matriz desde PDF</h2>
-    <p class="muted">Elija el PDF de la <b>Matriz de entradas y salidas</b> impreso por este programa (uno o varios meses). Se cargan los insumos, códigos, existencia inicial, ingresos y el consumo de cada día.</p>
-    <label class="btn pri">📄 Elegir PDF de la matriz…<input type="file" accept=".pdf,application/pdf" multiple class="hidden" onchange="importarMatrizPDFLocal(this)"></label>
+    <h2>📄 Cargar matriz desde PDF o Excel</h2>
+    <p class="muted">Elija la <b>Matriz de entradas y salidas</b> de un mes en <b>PDF</b> o en <b>Excel</b> (.xlsx), con el formato M03 (uno o varios meses). Se cargan los insumos, códigos, existencia inicial, cantidad recibida (con fecha y vencimiento) y el consumo de cada día. Después registre los vales del Almacén en <b>Registrar vale</b> y el sistema cuadra: existencia inicial + recibido − consumo = saldo.</p>
+    <label class="btn pri">📄 Elegir PDF o Excel de la matriz…<input type="file" accept=".pdf,application/pdf,.xlsx,.xltx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple class="hidden" onchange="importarMatrizPDFLocal(this)"></label>
     <div id="msgPdfMatriz" style="margin-top:8px"></div>
   </div>
   <div class="panel">
@@ -5064,16 +5064,83 @@ function mesDesdePDF(r){
   const vs=Object.keys(vales).sort().map(f=>({id:nuevoId('v'), num:'Ingreso según matriz '+f.slice(8)+'/'+f.slice(5,7), fecha:f, mes:r.mid, lineas:vales[f]}));
   return {mes:{id:r.mid, nombre:MESES_N[m-1]+' '+y, items}, vales:vs};
 }
+/* ---------- CARGAR MATRIZ DESDE EXCEL (.xlsx / .xltx / .xlsm): mismo resultado que desde el PDF ---------- */
+const esExcel=f=>/\.(xlsx|xltx|xlsm)$/i.test(f.name);
+/* lector propio de .xlsx (solo datos de la primera hoja; no necesita librerías) */
+async function leerZipTextos(buf, quiero){ const u=new Uint8Array(buf), dv=new DataView(buf), out={};
+  let e=-1; for(let i=u.length-22;i>=Math.max(0,u.length-70000);i--) if(dv.getUint32(i,true)===0x06054b50){ e=i; break; } if(e<0) throw new Error('El archivo no es un Excel válido (.xlsx).');
+  let n=dv.getUint16(e+10,true), p=dv.getUint32(e+16,true);
+  for(let k=0;k<n;k++){ const met=dv.getUint16(p+10,true), csz=dv.getUint32(p+20,true), ln=dv.getUint16(p+28,true), lx=dv.getUint16(p+30,true), lc=dv.getUint16(p+32,true), off=dv.getUint32(p+42,true);
+    const nom=new TextDecoder().decode(u.subarray(p+46,p+46+ln)); p+=46+ln+lx+lc; if(!quiero(nom)) continue;
+    const l2=dv.getUint16(off+26,true), x2=dv.getUint16(off+28,true), dat=u.subarray(off+30+l2+x2, off+30+l2+x2+csz);
+    let raw; if(met===0) raw=dat; else if(met===8){ raw=new Uint8Array(await new Response(new Blob([dat]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer()); } else continue;
+    out[nom]=new TextDecoder().decode(raw); }
+  return out; }
+async function leerHojaXlsx(file){
+  const z=await leerZipTextos(await file.arrayBuffer(), n=>/^xl\/(workbook\.xml|_rels\/workbook\.xml\.rels|sharedStrings\.xml|worksheets\/sheet\d+\.xml)$/.test(n));
+  const X=s=>new DOMParser().parseFromString(s,'application/xml');
+  let hoja=Object.keys(z).filter(n=>/worksheets\/sheet\d+\.xml$/.test(n)).sort()[0];
+  try{ const wbx=X(z['xl/workbook.xml']), rel=X(z['xl/_rels/workbook.xml.rels']); const s1=wbx.getElementsByTagName('sheet')[0]; const rid=s1.getAttribute('r:id')||s1.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
+    const r=[...rel.getElementsByTagName('Relationship')].find(x=>x.getAttribute('Id')===rid); if(r){ const tg=r.getAttribute('Target').replace(/^\/?(xl\/)?/,''); if(z['xl/'+tg]) hoja='xl/'+tg; } }catch(e){}
+  if(!hoja) throw new Error('El Excel no tiene hojas.');
+  const ss=z['xl/sharedStrings.xml']?[...X(z['xl/sharedStrings.xml']).getElementsByTagName('si')].map(si=>[...si.getElementsByTagName('t')].map(t=>t.textContent).join('')):[];
+  const filas={}; const colN=ref=>{ const m=ref.match(/^([A-Z]+)(\d+)$/); let c=0; for(const ch of m[1]) c=c*26+ch.charCodeAt(0)-64; return [Number(m[2]),c]; };
+  [...X(z[hoja]).getElementsByTagName('c')].forEach(c=>{ const ref=c.getAttribute('r'); if(!ref) return; const [r,k]=colN(ref), t=c.getAttribute('t'), vEl=c.getElementsByTagName('v')[0];
+    let v=null; if(t==='s') v=vEl?ss[Number(vEl.textContent)]:null; else if(t==='inlineStr') v=[...c.getElementsByTagName('t')].map(x=>x.textContent).join(''); else if(t==='str'||t==='e') v=vEl?vEl.textContent:null; else if(t==='b') v=vEl?vEl.textContent==='1':null; else v=vEl?Number(vEl.textContent):null;
+    if(v===null||v==='') return; (filas[r]=filas[r]||{})[k]=v; });
+  const maxR=Math.max(0,...Object.keys(filas).map(Number));
+  return {rowCount:maxR, get:(r,k)=>(filas[r]||{})[k], fila:r=>filas[r]||{}};
+}
+async function leerMatrizExcel(file){
+  const W=await leerHojaXlsx(file);
+  const txt=v=>v==null?'':String(v).replace(/\s+/g,' ').trim();
+  const numero=v=>{ if(v==null||v==='') return null; if(typeof v==='number') return v; const s=String(v).replace(/,/g,'').trim(); return /^-?\d+(\.\d+)?$/.test(s)?Number(s):null; };
+  const serial=n=>{ const d=new Date(Date.UTC(1899,11,30)+n*86400000); return d; };
+  const ws={rowCount:W.rowCount, getRow:r=>({eachCell:(o,fn)=>Object.entries(W.fila(r)).forEach(([k,v])=>fn({value:v},Number(k))), getCell:k=>({value:W.get(r,k)})})};
+  const val=c=>c?c.value:null;
+  let H=0, mid=null; const cols={d:{}};
+  for(let r=1;r<=Math.min(15,ws.rowCount);r++){ const row=ws.getRow(r);
+    row.eachCell({includeEmpty:false},(c,k)=>{ const s=txt(val(c)).toUpperCase();
+      const mm=s.match(/MES:?\s*([A-ZÁÉÍÓÚ]+)\s+(20\d\d)/); if(mm&&!mid){ const k2=MESES_N.indexOf(mm[1].normalize('NFD').replace(/[̀-ͯ]/g,'')); if(k2>=0) mid=mm[2]+'-'+String(k2+1).padStart(2,'0'); }
+      if(/^C[ÓO]DIGO$/.test(s)) H=r; }); if(H) break; }
+  if(!H) throw new Error('No se encontró la fila de títulos (CÓDIGO, INSUMOS, …).');
+  ws.getRow(H).eachCell({includeEmpty:false},(c,k)=>{ const v=val(c), s=txt(v).toUpperCase();
+    if(/^C[ÓO]DIGO$/.test(s)) cols.c=k; else if(/INSUMO/.test(s)) cols.n=k; else if(/EXISTENCIA/.test(s)) cols.ini=k; else if(/RECIBID/.test(s)) cols.rec=k;
+    else if(/INGRESO/.test(s)) cols.fing=k; else if(/VENCIM/.test(s)) cols.vto=k; else if(/TOTAL/.test(s)) cols.tot=k; else if(/SALDO/.test(s)) cols.sal=k;
+    else { const n=numero(v); if(n>=1&&n<=31&&Number.isInteger(n)) cols.d[n]=k; } });
+  if(!cols.n||Object.keys(cols.d).length<28) throw new Error('No se reconocieron las columnas de la matriz (INSUMOS y días 1 al 31).');
+  if(!mid){ const h=prompt('¿De qué mes es esta matriz? Escriba mes y año (ej.: 11/2026):'); const m2=String(h||'').match(/(\d{1,2})\D+(20\d\d)/); if(!m2) throw new Error('Falta el mes.'); mid=m2[2]+'-'+m2[1].padStart(2,'0'); }
+  const aFecha=v=>(typeof v==='number'&&v>20000&&v<80000)?serial(v):v;
+  const fechaTxt=v=>{ v=aFecha(v); if(v instanceof Date) return String(v.getUTCDate()).padStart(2,'0')+'/'+String(v.getUTCMonth()+1).padStart(2,'0'); return txt(v); };
+  const vtoTxt=v=>{ v=aFecha(v); if(v instanceof Date) return String(v.getUTCMonth()+1).padStart(2,'0')+'/'+v.getUTCFullYear(); const s=txt(v); const m3=s.match(/(\d{1,2})[\/\-](\d{4})/); return m3?m3[1].padStart(2,'0')+'/'+m3[2]:s; };
+  const filas=[], malos=[];
+  let conMarcas=false; for(let r=H+1;r<=Math.min(ws.rowCount,H+40);r++){ const v=txt(W.get(r,1)); if(/^[＋✕]$/.test(v)){ conMarcas=true; break; } }
+  for(let r=H+1;r<=ws.rowCount;r++){ const row=ws.getRow(r), g=k=>k?val(row.getCell(k)):null;
+    const n=txt(g(cols.n)), c=txt(g(cols.c)), primera=txt(val(row.getCell(1)));
+    if(/^TOTAL/i.test(n)||/^TOTAL/i.test(primera)||/^(ELABORADO|REVISADO|VO\.? ?BO)/i.test(primera)) break;
+    const d=Array.from({length:31},(_,i)=>numero(g(cols.d[i+1])));
+    const ini=numero(g(cols.ini)), rec=numero(g(cols.rec)), hayNum=ini!=null||rec!=null||d.some(x=>x!=null);
+    if(conMarcas){ if(/^[＋+]$/.test(primera)){ if(n) filas.push({t:'c', n}); continue; } }   // plantilla con ＋ (grupo) y ✕ (insumo)
+    else if(!n && primera && !hayNum && primera.length>2 && !/^\d+$/.test(primera)){ filas.push({t:'c', n:primera}); continue; }   // grupo en fila celeste combinada
+    if(!n) continue;
+    const tot=numero(g(cols.tot)), suma=d.reduce((s,x)=>s+(x||0),0);
+    if(tot!=null && Math.abs(tot-suma)>0.001) malos.push(n.slice(0,50));
+    filas.push({t:'i', c:c||null, n, ini, rec, fing:fechaTxt(g(cols.fing)), vto:vtoTxt(g(cols.vto)), d});
+  }
+  if(!filas.some(f=>f.t==='i')) throw new Error('No se encontraron insumos en el Excel.');
+  return {mid, filas, malos};
+}
+
 async function importarMatrizPDFLocal(inp){
   const fs=[...inp.files]; inp.value=''; const msg=document.getElementById('msgPdfMatriz'); if(!fs.length) return;
   for(const f of fs){
-    try{ msg.innerHTML='⟳ Leyendo '+esc(f.name)+'…'; const r=await leerMatrizPDF(f), x=mesDesdePDF(r), ex=mes(x.mes.id);
+    try{ msg.innerHTML='⟳ Leyendo '+esc(f.name)+'…'; const r=esExcel(f)?await leerMatrizExcel(f):await leerMatrizPDF(f), x=mesDesdePDF(r), ex=mes(x.mes.id), origen=esExcel(f)?'Excel':'PDF';
       const nIns=x.mes.items.filter(i=>i.t==='i').length;
-      if(ex && !confirm(`El PDF es de ${x.mes.nombre} (${nIns} insumos).\n${x.mes.nombre} ya existe en el programa: se REEMPLAZARÁN sus insumos, consumos e ingresos con los del PDF.\n\n¿Continuar?`)) { msg.textContent='Cancelado.'; continue; }
+      if(ex && !confirm(`El ${origen} es de ${x.mes.nombre} (${nIns} insumos).\n${x.mes.nombre} ya existe en el programa: se REEMPLAZARÁN sus insumos, consumos e ingresos con los del ${origen}.\n\n¿Continuar?`)) { msg.textContent='Cancelado.'; continue; }
       if(ex){ ex.items=x.mes.items; S.vales=S.vales.filter(v=>v.mes!==x.mes.id); }
       else { S.meses.push(x.mes); S.meses.sort((a,b)=>a.id<b.id?-1:1); }
       S.vales.push(...x.vales); guardar(); llenarMeses();
-      msg.innerHTML=`<span class="ok-msg">✅ ${esc(x.mes.nombre)} cargado desde el PDF: ${nIns} insumos, ${x.vales.reduce((s,v)=>s+v.lineas.length,0)} ingresos.${r.malos.length?` ⚠️ ${r.malos.length} fila(s) cuyo total no coincide con los días: revíselas.`:' Todos los totales coinciden con el PDF.'}</span>`;
+      msg.innerHTML=`<span class="ok-msg">✅ ${esc(x.mes.nombre)} cargado desde el ${origen}: ${nIns} insumos, ${x.vales.reduce((s,v)=>s+v.lineas.length,0)} ingresos.${r.malos.length?` ⚠️ ${r.malos.length} fila(s) cuyo total no coincide con los días: revíselas.`:' Todos los totales coinciden con el ${origen}.'}</span>`;
     }catch(e){ msg.innerHTML='<span class="neg">'+esc(f.name)+': '+esc(e.message||e)+'</span>'; }
   }
 }
@@ -7424,9 +7491,9 @@ async function activarCodigo(){
 async function importarInicial(inp){
   const fs=[...inp.files]; if(!fs.length) return; const m=document.getElementById('msgImportar');
   try{ let d;
-    if(fs.every(f=>/\.pdf$/i.test(f.name)||f.type==='application/pdf')){
+    if(fs.every(f=>/\.pdf$/i.test(f.name)||f.type==='application/pdf'||esExcel(f))){
       d={meses:[], vales:[], cuadres:{}, cfg:{}}; let avisos=[];
-      for(const f of fs){ m.textContent='⟳ Leyendo '+f.name+'…'; const r=await leerMatrizPDF(f), x=mesDesdePDF(r);
+      for(const f of fs){ m.textContent='⟳ Leyendo '+f.name+'…'; const r=esExcel(f)?await leerMatrizExcel(f):await leerMatrizPDF(f), x=mesDesdePDF(r);
         d.meses=d.meses.filter(mm=>mm.id!==x.mes.id).concat([x.mes]); d.vales=d.vales.filter(v=>v.mes!==x.mes.id).concat(x.vales);
         if(r.malos.length) avisos.push(x.mes.nombre+': '+r.malos.length+' fila(s) para revisar'); }
       d.meses.sort((a,b)=>a.id<b.id?-1:1);
