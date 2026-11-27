@@ -220,6 +220,7 @@ table.grid tr.hlF td{background:#eaf2ff}table.grid td.hlC{background:#fff3c4!imp
 .ed-tabla input.c:focus{background:#fff6c9;outline:2px solid #2f5ea8;box-shadow:none}
 .ed-tabla td.calc{padding:0 8px;text-align:right;font-weight:700;white-space:nowrap;background:#f6f8fc}
 .ed-tabla td.sal.neg{color:#c4122f}.ed-tabla td.rec{color:#12925f}
+.ed-tabla td.rec input.c{color:#12925f;font-weight:700;width:calc(60px*var(--ez))}.ed-tabla td.rec.aj{background:#fff4d6!important}.ed-tabla td.rec.aj input.c{color:#9a5b00}
 .ed-tabla tr.cat td{background:linear-gradient(90deg,#dfe8f8,#eef3fb);font-weight:800;color:#173a6e;height:calc(32px*var(--ez))}
 .ed-tabla tr.cat td.nom{letter-spacing:.4px}
 .ed-tabla tr.sel td{background:#eaf2ff!important}.ed-tabla tr.sel td.nom{box-shadow:2px 0 0 #2f5ea8,inset 4px 0 0 #2f5ea8}
@@ -5883,7 +5884,7 @@ function pintarEd(){
     h+=`<tr data-id="${it.id}" class="${ED.sel.has(it.id)?'sel':''}"><td class="fx chk"><input type="checkbox" class="edChk"${ED.sel.has(it.id)?' checked':''}></td>`+
       `<td class="fx cod"><input class="c" data-k="cod" value="${esc(it.c||'')}"></td><td class="fx nom" title="Doble clic para modificar">${esc(it.n)}</td>`+
       `<td class="fx fini ini${x.iniAuto?' iauto':''}"><input class="c" data-k="ini" value="${it.ini??''}" placeholder="${x.iniAuto?fmt(x.ini):''}" title="${x.iniAuto?'Automática (saldo del mes anterior)':'Existencia inicial'}"></td>`+
-      `<td class="fx frec calc rec">${x.rec?fmt(x.rec):''}</td>`;
+      `<td class="fx frec rec${edAjRec(mid,it.id)?' aj':''}" title="${plE(edTitRec(mid,it.id,x.rec))}"><input class="c" data-k="rec" value="${x.rec||''}" inputmode="numeric"></td>`;
     for(let k=0;k<31;k++) h+=`<td><input class="c" data-k="${k}" value="${d[k]!=null&&d[k]!==''?d[k]:''}"${k>=dm?' disabled':''}></td>`;
     h+=`<td class="fx fxr ftot calc tot">${fmt(x.cons)}</td><td class="fx fxr fsal calc sal ${x.sal<0?'neg':''}">${x.sinDatos?'':fmt(x.sal)}</td></tr>`;
   });
@@ -5905,7 +5906,21 @@ function edVerCelda(td){
 }
 function edItem(id){ return mes(edMid()).items.find(i=>i.id===id); }
 function edMarcados(){ const ids=[...ED.sel].filter(id=>edItem(id)); if(!ids.length && ED.foco && edItem(ED.foco)) ids.push(ED.foco); return ids; }
+/* RECIB. editable: lo recibido viene de los vales; si se cambia aquí, la diferencia queda en un “vale de ajuste” del mes (se ve en Vales registrados y en las tarjetas de control) */
+function edValeAj(mid){ return S.vales.find(v=>v.mes===mid && (v.ajusteEd || String(v.num)==='AJUSTE '+mid)); }   // en la nube se reconoce por su número
+function edAjRec(mid,iid){ const v=edValeAj(mid); const l=v&&v.lineas.find(x=>x.item===iid); return l?Number(l.cant)||0:0; }
+function edTitRec(mid,iid,tot){ const aj=edAjRec(mid,iid); return aj?`Recibido ${fmt(tot)}: vales ${fmt(tot-aj)} + ajuste manual ${aj>0?'+':''}${fmt(aj)} (vale de ajuste del mes)`:'Recibido en el mes según los vales. Puede escribir otra cantidad: la diferencia queda en un vale de ajuste.'; }
+function edPonerRec(mid,iid,v){ const tot=calcular(mid)[iid].rec, aj=edAjRec(mid,iid), deVales=tot-aj, dif=(v===null?0:v)-deVales;
+  let vale=edValeAj(mid);
+  if(!vale && dif!==0){ const dm=diasDelMes(mid), h=new Date(), hid=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0');
+    vale={id:nuevoId('v'), num:'AJUSTE '+mid, fecha:hid===mid?h.toISOString().slice(0,10):mid+'-'+String(dm).padStart(2,'0'), mes:mid, rec:'Ajuste desde Editar matriz', ajusteEd:true, lineas:[]}; S.vales.push(vale); }
+  if(!vale) return;
+  const l=vale.lineas.find(x=>x.item===iid);
+  if(dif===0){ if(l) vale.lineas.splice(vale.lineas.indexOf(l),1); }
+  else if(l) l.cant=dif; else vale.lineas.push({id:nuevoId('l'), item:iid, cant:dif, vto:'', obs:'Ajuste manual de lo recibido'});
+  if(!vale.lineas.length) S.vales.splice(S.vales.indexOf(vale),1); }
 function edActualizarFila(id){ const c=calcular(edMid())[id], tr=document.querySelector(`#edTabla tr[data-id="${id}"]`); if(!c||!tr) return;
+  const rc=tr.querySelector('td.rec'); if(rc){ const ri=rc.querySelector('input'); if(ri&&ri!==document.activeElement) ri.value=c.rec||''; rc.classList.toggle('aj',!!edAjRec(edMid(),id)); rc.title=edTitRec(edMid(),id,c.rec); }
   tr.querySelector('td.tot').textContent=fmt(c.cons); const s=tr.querySelector('td.sal'); s.textContent=c.sinDatos?'':fmt(c.sal); s.classList.toggle('neg',c.sal<0); }
 document.getElementById('edTabla').addEventListener('change',e=>{
   const inp=e.target;
@@ -5917,6 +5932,7 @@ document.getElementById('edTabla').addEventListener('change',e=>{
   if(k==='cod'){ if(raw) it.c=raw; else delete it.c; guardar(); return; }
   let v=null; if(raw!==''){ v=evalCant(raw); if(isNaN(v)){ alert('Escriba solo números (puede escribir 10+8).'); inp.value=''; return; } inp.value=v; }
   if(k==='ini'){ if(v===null) delete it.ini; else it.ini=v; }
+  else if(k==='rec'){ edPonerRec(edMid(), it.id, v); inp.value=calcular(edMid())[it.id].rec||''; toast('📥 Recibido actualizado: la diferencia quedó en el vale de ajuste del mes','ok'); }
   else { const d=Number(k); it.d=it.d||[]; while(it.d.length<=d) it.d.push(null); it.d[d]=v; while(it.d.length && it.d[it.d.length-1]==null) it.d.pop(); }
   guardar(); edActualizarFila(it.id);
 });
@@ -5932,7 +5948,7 @@ document.getElementById('edTabla').addEventListener('keydown',e=>{
   const inp=e.target; if(!inp.classList || !inp.classList.contains('c')) return;
   const tr=inp.closest('tr'), filas=[...document.querySelectorAll('#edTabla tbody tr:not(.cat)')], r=filas.indexOf(tr), k=inp.dataset.k;
   const ir=(fila,kk)=>{ const t=filas[fila]; if(!t) return; const x=t.querySelector(`input.c[data-k="${kk}"]`); if(x && !x.disabled){ x.focus({preventScroll:true}); x.select(); edVerCelda(x.parentNode); } };
-  const orden=['cod','ini',...Array.from({length:31},(_,i)=>String(i))], ci=orden.indexOf(k);
+  const orden=['cod','ini','rec',...Array.from({length:31},(_,i)=>String(i))], ci=orden.indexOf(k);
   if(e.altKey && (e.key==='ArrowUp'||e.key==='ArrowDown')){ e.preventDefault(); ED.foco=tr.dataset.id; edMover(e.key==='ArrowUp'?-1:1); return; }
   if(e.key==='Enter'||e.key==='ArrowDown'){ e.preventDefault(); inp.dispatchEvent(new Event('change',{bubbles:true})); ir(r+1,k); }
   else if(e.key==='ArrowUp'){ e.preventDefault(); ir(r-1,k); }
