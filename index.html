@@ -165,6 +165,7 @@ table.grid tr.hlF td{background:#eaf2ff}table.grid td.hlC{background:#fff3c4!imp
 .doc .as h4{font-size:12px;margin:12px 0 4px;color:#1f3a68}.doc .as p{font-size:11px;margin:4px 0}.doc .as .caja{border:1px solid #9aa6b8;padding:6px 8px;font-size:11px;min-height:40px;white-space:pre-wrap}
 .doc .as table.mtz td{font-size:9.5px}.doc .as .ok{color:#1a7f37;font-weight:700}.doc .as .al{color:#c00000;font-weight:700}
 .doc .rojo{color:#c00000;font-weight:700}
+.doc table.mtzb td{height:21px}.doc table.mtzb th{font-size:7px!important;line-height:1.05;padding:2px 1px!important}.doc table.mtzb td.n{font-size:7.5px}.doc table.mtzb tr.cat td{height:15px}
 .doc table.exd td{text-align:right}.doc table.exd td.n{text-align:left}.doc table.exd .auto{font-style:italic;color:#555}.doc table.exd small{font-size:8px}
 .doc th.acc,.doc td.acc{border:0!important;background:transparent!important;width:62px;padding:0 2px!important;white-space:nowrap}
 .doc td.acc button{border:0;background:#fde7e9;color:#c00000;border-radius:4px;cursor:pointer;font-size:10px;padding:1px 4px;margin-right:1px}
@@ -3486,6 +3487,7 @@ nav .fuera-area{display:none!important}
       <div class="campo"><label>Documento</label>
         <select id="dTipo">
           <option value="matriz">Matriz de entradas y salidas de insumos</option>
+          <option value="matrizBlanco">Matriz en blanco (para llenar a mano)</option>
           <option value="vales">Registro de vales del mes</option>
           <option value="resumen">Resumen ejecutivo del mes</option>
           <option value="alertas">Saldos negativos y próximos a vencer</option>
@@ -4542,6 +4544,22 @@ function subEnc(m, extra){
 }
 function firmas(){ const c=S.cfg; if(!c.firmasOn) return ''; const fs=[c.f1,c.f2,c.f3].filter(Boolean); return fs.length?`<div class="firmas">${fs.map(f=>`<div>${esc(f)}</div>`).join('')}</div>`:''; }
 
+/* ---------- MATRIZ EN BLANCO: para imprimir y llenar a mano (insumos y códigos del mes, casillas vacías) ---------- */
+function docMatrizBlanco(mid){
+  const m=mes(mid), FILAS_EXTRA=6;
+  const cg='<colgroup><col style="width:5.2%"><col style="width:21%"><col style="width:3.6%"><col style="width:3.6%"><col style="width:3.6%"><col style="width:4%">'+'<col style="width:1.62%">'.repeat(31)+'<col style="width:3.6%"><col style="width:3.6%"></colgroup>';
+  let h='<table class="mtz mtzb" style="width:1340px;table-layout:fixed">'+cg+'<thead><tr><td colspan="39" style="border:0;padding:0">'+encabezado()+subEnc(m)+'</td></tr><tr class="hfija"><th style="width:62px">CÓDIGO</th><th style="width:270px">INSUMOS</th><th style="width:44px">EXISTENCIA INICIAL</th><th style="width:44px">CANTIDAD RECIBIDA</th><th style="width:44px">FECHA DE INGRESO</th><th style="width:48px">FECHA DE VENCIMIENTO</th>';
+  for(let d=1;d<=31;d++) h+=`<th style="width:23px">${d}</th>`;
+  h+='<th style="width:42px">TOTAL CONSUMO</th><th style="width:48px">SALDO FINAL</th></tr></thead><tbody>';
+  const vacias=n=>'<td></td>'.repeat(n);
+  m.items.forEach(it=>{ if(it.t==='c'){ h+=`<tr class="cat"><td colspan="39">${esc(it.n)}</td></tr>`; return; }
+    h+=`<tr><td>${esc(it.c||'')}</td><td class="n">${esc(it.n)}</td>${vacias(37)}</tr>`; });
+  h+=`<tr class="cat"><td colspan="39">OTROS INSUMOS (escriba código y nombre)</td></tr>`;
+  for(let k=0;k<FILAS_EXTRA;k++) h+=`<tr><td></td><td class="n">&nbsp;</td>${vacias(37)}</tr>`;
+  h+=`<tr class="tot"><td colspan="2" style="text-align:center"><b>TOTALES</b></td>${vacias(37)}</tr></tbody></table>`;
+  return h+`<div class="firmas"><div>${esc(S.cfg.f1||'Elaborado por')}</div><div>${esc(S.cfg.f2||'Revisado por')}</div><div>${esc(S.cfg.f3||'Vo. Bo. Jefatura')}</div></div>
+    <div class="pie">Matriz en blanco para llenar a mano · Saldo final = existencia inicial + cantidad recibida − total consumo. Anote lo recibido según el vale del Almacén (fecha de ingreso y vencimiento). Luego se pasa al sistema.</div>`;
+}
 let EDITABLE=false;   // true solo en la vista previa de pantalla
 function docMatriz(mid){
   const m=mes(mid), c=calcular(mid);
@@ -5148,6 +5166,7 @@ async function importarMatrizPDFLocal(inp){
 /* ---------- INFORMES Y EXPORTAR (PDF, Word, Excel) ---------- */
 const INFORMES=[
   ['matriz','🧮','Matriz de entradas y salidas','Formato M03 con existencia, ingresos, consumo diario y saldo.','legal','landscape'],
+  ['matrizBlanco','🖊️','Matriz en blanco (para llenar a mano)','Con los insumos y códigos del mes y las casillas vacías. En Excel trae las fórmulas para pasarla a digital.','legal','landscape'],
   ['existencias','📊','Existencias del mes','Saldo anterior, existencia inicial, ingresos, consumo y saldo de cada insumo.','letter','landscape'],
   ['kardex','🗂️','Tarjetas de control (kardex)','Del mes, con el diseño del MINSAL, 2 tarjetas por hoja carta.','letter','portrait'],
   ['vales','📋','Registro de vales','Vales de ingreso del mes con sus renglones.','letter','portrait'],
@@ -5201,6 +5220,7 @@ document.getElementById('infGrid').addEventListener('click',e=>{ const b=e.targe
   prepararDoc(tipo);
   if(f==='pdf'){ irA('vistaDocs'); prepararDoc(tipo); pintarDoc(); setTimeout(()=>document.getElementById('btnImprimir').click(),150); return; }
   if(f==='excel' && tipo==='matriz'){ excelMatriz(document.getElementById('infMes').value); return; }
+  if(f==='excel' && tipo==='matrizBlanco'){ excelMatriz(document.getElementById('infMes').value,{blanco:true}); return; }
   const v=vistaActual(); archivoDoc(f); if(v!=='vistaInf') irA('vistaInf'); });
 document.getElementById('infBus').addEventListener('input',pintarInformes);
 
@@ -6140,7 +6160,7 @@ function montarPerfilPC(){
 }
 
 /* ---------- MATRIZ EN EXCEL REAL (.xlsx) con el diseño del sistema y fórmulas ---------- */
-async function excelMatriz(mid){
+async function excelMatriz(mid, opt){ opt=opt||{}; const BL=!!opt.blanco;
   try{ await cargarScript('xlsx/exceljs.min.js'); }catch(e){ alert('Falta el componente para Excel (carpeta "xlsx"). En línea recargue la página; en la PC instale el programa con el kit nuevo.'); return; }
   const m=mes(mid), c=calcular(mid), cfg=S.cfg||{}, nd=31, D1=7, TOT=D1+nd, SAL=TOT+1, ULT=SAL;
   const AZ='FF41608F', AZB='FF2C4670', CEL='FFD9E1F2';
@@ -6174,17 +6194,21 @@ async function excelMatriz(mid){
   let r=H+1; const prim=r, NUM='#,##0;[Red]-#,##0;""';
   m.items.forEach(it=>{
     if(it.t!=='i'){ ws.getRow(r).height=14; ws.mergeCells(r,1,r,ULT); put(r,1,it.n,fnt(8,true,'FF173A6E'),izq,CEL); bord(r,1,r,ULT); r++; return; }
-    const x=c[it.id], n=String(it.n||''); ws.getRow(r).height=n.length<=60?12:(n.length<=120?22:32);
+    const x=BL?{ini:null,iniManual:false,iniAuto:false,rec:0,fechas:[],vto:'',cons:0}:c[it.id], n=String(it.n||''); ws.getRow(r).height=BL?(n.length<=60?17:(n.length<=120?24:32)):(n.length<=60?12:(n.length<=120?22:32));
     put(r,1,it.c?(/^\d+$/.test(it.c)?Number(it.c):it.c):null,fnt(7.5)); put(r,2,n,fnt(7),izq);
     put(r,3,x.iniManual?x.ini:(x.iniAuto?x.ini:null),fnt(7.5, false, x.iniAuto?'FF555555':'FF000000'));
     put(r,4,x.rec||null,fnt(7.5,!!x.rec,x.rec?'FF0E6B45':'FF000000'));
     put(r,5,x.fechas.length?x.fechas.map(f=>f.slice(8,10)+'/'+f.slice(5,7)).join(', '):null,fnt(6.5));
     put(r,6,x.vto?(x.vto.slice(5,7)+'/'+x.vto.slice(0,4)):null,fnt(6.5));
-    const d=it.d||[]; for(let k=0;k<nd;k++){ const v=d[k]; put(r,D1+k,(v===null||v===undefined||v==='')?null:Number(v),fnt(7)); }
+    const d=BL?[]:(it.d||[]); for(let k=0;k<nd;k++){ const v=d[k]; put(r,D1+k,(v===null||v===undefined||v==='')?null:Number(v),fnt(7)); }
     put(r,TOT,{formula:`SUM(${col(D1)}${r}:${col(D1+nd-1)}${r})`, result:x.cons},fnt(7.5,true));
     put(r,SAL,{formula:`N(C${r})+N(D${r})-${col(TOT)}${r}`, result:(x.ini||0)+x.rec-x.cons},fnt(7.5,true),ctr,'FFF3F6FB');
     [3,4,...Array.from({length:nd+2},(_,i)=>D1+i)].forEach(cc=>ws.getCell(r,cc).numFmt=NUM);
     bord(r,1,r,ULT); r++; });
+  if(BL){ ws.getRow(r).height=14; ws.mergeCells(r,1,r,ULT); put(r,1,'OTROS INSUMOS (escriba código y nombre)',fnt(8,true,'FF173A6E'),izq,CEL); bord(r,1,r,ULT); r++;
+    for(let k=0;k<6;k++){ ws.getRow(r).height=17; for(let cc=1;cc<=ULT;cc++) put(r,cc,null,fnt(7.5),cc===2?izq:ctr);
+      put(r,TOT,{formula:`SUM(${col(D1)}${r}:${col(D1+nd-1)}${r})`, result:0},fnt(7.5,true)); put(r,SAL,{formula:`N(C${r})+N(D${r})-${col(TOT)}${r}`, result:0},fnt(7.5,true),ctr,'FFF3F6FB');
+      [3,4,...Array.from({length:nd+2},(_,i)=>D1+i)].forEach(cc=>ws.getCell(r,cc).numFmt=NUM); bord(r,1,r,ULT); r++; } }
   const ult=r-1;
   // totales
   ws.getRow(r).height=16; ws.mergeCells(r,1,r,2); put(r,1,'TOTALES',fnt(8.5,true,'FFFFFFFF'),ctr,AZ);
@@ -6195,9 +6219,9 @@ async function excelMatriz(mid){
     style:{font:{name:'Arial',bold:true,color:{argb:'FFC00000'}},fill:{type:'pattern',pattern:'solid',bgColor:{argb:'FFFDE7E9'}}}}]});
   // firmas y nota
   r+=3; [[2,2,cfg.f1||'Elaborado por'],[7,18,cfg.f2||'Revisado por'],[24,ULT-2,cfg.f3||'Vo. Bo. Jefatura']].forEach(([a,b,t])=>{ ws.mergeCells(r,a,r,b); put(r,a,t,fnt(8.5,true)); for(let cc=a;cc<=b;cc++) ws.getCell(r,cc).border={top:{style:'thin',color:{argb:'FF000000'}}}; });
-  r+=2; ws.mergeCells(r,1,r,ULT); put(r,1,'Saldo final = existencia inicial + cantidad recibida − total consumo (fórmulas). La cantidad recibida sale de los vales registrados en el sistema. Un saldo negativo indica que falta la existencia inicial o un vale. Generado el '+new Date().toLocaleString('es-SV')+'.',fnt(7,false,'FF555555'),izq);
+  r+=2; ws.mergeCells(r,1,r,ULT); put(r,1,'Saldo final = existencia inicial + cantidad recibida − total consumo (fórmulas). '+(BL?'Llene a mano o en Excel: el total y el saldo se calculan solos; luego cárguela en el sistema (Respaldo y ajustes → Cargar matriz desde PDF o Excel).':'La cantidad recibida sale de los vales registrados en el sistema.')+' Un saldo negativo indica que falta la existencia inicial o un vale. Generado el '+new Date().toLocaleString('es-SV')+'.',fnt(7,false,'FF555555'),izq);
   // hoja de vales del mes
-  const vs=S.vales.filter(v=>v.mes===mid).sort((a,b)=>(a.fecha||'')<(b.fecha||'')?-1:1);
+  const vs=BL?[]:S.vales.filter(v=>v.mes===mid).sort((a,b)=>(a.fecha||'')<(b.fecha||'')?-1:1);
   if(vs.length){ const w2=wb.addWorksheet('Vales recibidos',{views:[{state:'frozen',ySplit:3,showGridLines:false}],pageSetup:{paperSize:1,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0}});
     [12,11,11,60,14,12,10].forEach((w,i)=>w2.getColumn(i+1).width=w);
     w2.mergeCells('A1:G1'); w2.getCell('A1').value='VALES RECIBIDOS EN '+m.nombre; w2.getCell('A1').font=fnt(11,true,'FF173A6E');
@@ -6208,7 +6232,7 @@ async function excelMatriz(mid){
     w2.getCell(rr,4).value='TOTAL RECIBIDO'; w2.getCell(rr,4).font=fnt(9,true);
     const t=w2.getCell(rr,7); t.value={formula:`SUM(G4:G${rr-1})`}; t.font=fnt(9,true); t.alignment=ctr; t.numFmt='#,##0'; }
   const buf=await wb.xlsx.writeBuffer();
-  const nombre=`Matriz ${m.nombre}`.replace(/[\\/:*?"<>|]/g,'-');
+  const nombre=(BL?`Matriz en blanco ${m.nombre}`:`Matriz ${m.nombre}`).replace(/[\\/:*?"<>|]/g,'-');
   descargar(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), nombre+'.xlsx');
   toast(`✅ Se descargó <b>${esc(nombre)}.xlsx</b> con fórmulas (carpeta Descargas)`,'ok');
 }
@@ -6918,7 +6942,7 @@ function pintarDoc(){
   const pw = (ori==='landscape'?pap.h:pap.w) - 2*MARGEN;          // ancho útil en pulgadas
   const doc=document.getElementById('doc');
   EDITABLE = !PARA_ARCHIVO;
-  doc.innerHTML = ({matriz:docMatriz, vales:docVales, resumen:docResumen, alertas:docAlertas, cuadre:docCuadre, kardex:docKardex, existencias:docExistencias, antisoborno:docAntisoborno, recibos:docRecibos, hojaPedido:docHojaPedido, retiros:docRetiros, auditoria:docAuditoria, solTurnos:docSolTurnos, qrCartel:docQrCartel, almacen:docAlmacen})[tipo](mid);
+  doc.innerHTML = ({matriz:docMatriz, matrizBlanco:docMatrizBlanco, vales:docVales, resumen:docResumen, alertas:docAlertas, cuadre:docCuadre, kardex:docKardex, existencias:docExistencias, antisoborno:docAntisoborno, recibos:docRecibos, hojaPedido:docHojaPedido, retiros:docRetiros, auditoria:docAuditoria, solTurnos:docSolTurnos, qrCartel:docQrCartel, almacen:docAlmacen})[tipo](mid);
   document.getElementById('dDesdeC').classList.toggle('hidden', tipo!=='auditoria'); document.getElementById('dMesLbl').textContent = tipo==='auditoria' ? 'Hasta' : 'Mes';
   document.getElementById('kxOpc').classList.toggle('hidden', tipo!=='kardex');
   EDITABLE = false;
@@ -6941,8 +6965,8 @@ document.getElementById('dDesde').addEventListener('change',()=>pintarDoc());
 ['dTipo','dMes','dPapel','dOri'].forEach(id=>document.getElementById(id).addEventListener('change', ()=>{
   if(id==='dTipo'||id==='dMes') RECIBO_SEL=null;
   if(id==='dTipo'){ const tp=document.getElementById('dTipo').value;
-                    document.getElementById('dOri').value = (tp==='matriz'||tp==='existencias'||(tp==='kardex' && document.getElementById('kxPP').value!=='2'))?'landscape':'portrait';
-                    document.getElementById('dPapel').value = tp==='matriz'?'legal':'letter'; }
+                    document.getElementById('dOri').value = (tp==='matriz'||tp==='matrizBlanco'||tp==='existencias'||(tp==='kardex' && document.getElementById('kxPP').value!=='2'))?'landscape':'portrait';
+                    document.getElementById('dPapel').value = (tp==='matriz'||tp==='matrizBlanco')?'legal':'letter'; }
   pintarDoc(); }));
 document.getElementById('btnImprimir').addEventListener('click', ()=>{
   pintarDoc();
@@ -6951,6 +6975,7 @@ document.getElementById('btnImprimir').addEventListener('click', ()=>{
   setTimeout(()=>{ window.print(); setTimeout(()=>document.title=t0, 1500); }, 100);
 });
 const DOCS = [ ['matriz','Matriz de entradas y salidas de insumos','legal','landscape'],
+               ['matrizBlanco','Matriz en blanco para llenar a mano','legal','landscape'],
                ['vales','Registro de vales','letter','portrait'],
                ['resumen','Resumen ejecutivo','letter','portrait'],
                ['alertas','Saldos negativos y proximos a vencer','letter','portrait'],
@@ -7009,6 +7034,7 @@ document.getElementById('btnCarpeta').addEventListener('click', ()=>guardarCarpe
 document.getElementById('btnCambiarCarpeta').addEventListener('click', ()=>guardarCarpeta(true));
 document.getElementById('btnExcel').addEventListener('click', ()=>{
   if(document.getElementById('dTipo').value==='matriz'){ excelMatriz(document.getElementById('dMes').value); return; }
+  if(document.getElementById('dTipo').value==='matrizBlanco'){ excelMatriz(document.getElementById('dMes').value,{blanco:true}); return; }
   pintarDoc();
   const d=document.getElementById('doc').cloneNode(true); d.style.zoom=1; d.style.width='';
   d.querySelectorAll('[contenteditable]').forEach(x=>x.removeAttribute('contenteditable'));
