@@ -269,6 +269,7 @@ table.grid th{background:linear-gradient(180deg,#2f5ea8,#24508f)}
 #zonaArchivo:hover,#reZonaArch:hover{transform:translateY(-2px);box-shadow:var(--sombra2)}
 .toast{position:fixed;right:22px;bottom:22px;z-index:2000;background:#10284f;color:#fff;padding:12px 18px;border-radius:12px;box-shadow:var(--sombra2);font-size:13.5px;animation:toastIn .35s cubic-bezier(.2,.7,.2,1);max-width:420px}
 .toast.ok{background:linear-gradient(135deg,#12925f,#0e7a4f)}
+#usuarioTop{color:#cfe0f7;font-size:12px;margin-top:3px}#usuarioTop a{color:#fff;font-weight:700;background:rgba(255,255,255,.14);padding:2px 10px;border-radius:999px;text-decoration:none;margin-left:4px}#usuarioTop a:hover{background:rgba(255,255,255,.26)}
 @keyframes toastIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
 #login,#sinAcceso,#importar{background:linear-gradient(135deg,#0b1f40 0%,#173a6e 45%,#1d5f8f 100%)!important;overflow:hidden}
 #login::before,#login::after{content:"";position:absolute;border-radius:50%;filter:blur(40px);opacity:.55;animation:flotar 12s ease-in-out infinite alternate}
@@ -310,8 +311,10 @@ table.grid th{background:linear-gradient(180deg,#2f5ea8,#24508f)}
 </div>
 <div id="importar" class="hidden" style="position:fixed;inset:0;background:var(--fondo);z-index:94;display:flex;align-items:center;justify-content:center;padding:16px">
   <div class="panel" style="width:min(520px,100%)"><h2>📥 Cargar los datos por primera vez</h2>
-  <p>La base de datos está vacía. Elija el archivo <b>“Datos iniciales Bodega Emergencias.json”</b> (o un respaldo descargado del programa de la PC).</p>
-  <label class="btn pri">Elegir archivo…<input type="file" accept=".json" class="hidden" onchange="importarInicial(this)"></label>
+  <p>La base de datos está vacía. Puede cargar:</p>
+  <ul style="margin:6px 0 12px;padding-left:20px;line-height:1.6"><li>📄 El <b>PDF de la Matriz de entradas y salidas</b> (uno o varios meses a la vez), o</li>
+    <li>💾 el archivo <b>“Datos iniciales Bodega Emergencias.json”</b> o un respaldo del programa de la PC.</li></ul>
+  <label class="btn pri">📂 Elegir PDF o archivo…<input type="file" accept=".pdf,application/pdf,.json" multiple class="hidden" onchange="importarInicial(this)"></label>
   <div id="msgImportar" style="margin-top:10px"></div></div>
 </div>
 <header class="app">
@@ -762,6 +765,12 @@ table.grid th{background:linear-gradient(180deg,#2f5ea8,#24508f)}
       <span class="muted">Esta PC: <b id="nombrePC"></b> · <a href="#" id="cambiarPC">cambiar nombre</a></span>
     </div>
     <div id="msgUSB" style="margin-top:10px"></div>
+  </div>
+  <div class="panel">
+    <h2>📄 Cargar matriz desde PDF</h2>
+    <p class="muted">Elija el PDF de la <b>Matriz de entradas y salidas</b> impreso por este programa (uno o varios meses). Se cargan los insumos, códigos, existencia inicial, ingresos y el consumo de cada día.</p>
+    <label class="btn pri">📄 Elegir PDF de la matriz…<input type="file" accept=".pdf,application/pdf" multiple class="hidden" onchange="importarMatrizPDFLocal(this)"></label>
+    <div id="msgPdfMatriz" style="margin-top:8px"></div>
   </div>
   <div class="panel">
     <h2>👥 Usuarios con acceso</h2>
@@ -2170,6 +2179,81 @@ function abrirLeida(fecha){
 }
 document.getElementById('rtFotos').addEventListener('change',e=>{ const fs=[...e.target.files]; e.target.value=''; if(fs.length) subirHojas(fs); });
 
+/* ---------- IMPORTAR LA MATRIZ DESDE SU PDF (el que imprime este programa) ---------- */
+const MESES_N=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+const numPdf=s=>{ s=String(s||'').replace(/[,\s]/g,''); return /^-?\d+(\.\d+)?$/.test(s)?Number(s):null; };
+async function leerMatrizPDF(file){
+  const pdf=await pdfDoc(new Uint8Array(await file.arrayBuffer())); const filas=[]; let mid=null;
+  for(let n=1;n<=pdf.numPages;n++){
+    const pg=await pdf.getPage(n); try{ await pg.getOperatorList(); }catch(e){}
+    const tc=await pg.getTextContent(), negr={};
+    const it=tc.items.filter(x=>x.str && x.str.trim()).map(x=>{ let b=negr[x.fontName]; if(b===undefined){ try{ const f=pg.commonObjs.get(x.fontName); b=/bold|black|heavy/i.test((f&&(f.name||f.loadedName))||''); }catch(e){ b=false; } negr[x.fontName]=b; }
+      return {s:x.str.trim(), x:x.transform[4], y:x.transform[5], w:x.width||0, cx:x.transform[4]+(x.width||0)/2, b}; });
+    const todo=it.map(x=>x.s).join(' ');
+    if(!mid){ const mm=todo.match(/MES:\s*([A-ZÁÉÍÓÚ]+)\s+(20\d\d)/i); if(mm){ const k=MESES_N.indexOf(mm[1].toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'')); if(k>=0) mid=mm[2]+'-'+String(k+1).padStart(2,'0'); } }
+    const hc=it.find(x=>/^C[ÓO]DIGO$/i.test(x.s)); if(!hc) continue; const yH=hc.y;
+    const hdr=it.filter(x=>x.y>yH-8 && x.y<yH+10);
+    const c1=re=>{ const h=hdr.find(x=>re.test(x.s)); return h?h.cx:null; };
+    const cols={ini:c1(/^EXISTENCIA/i), rec:c1(/^CANTIDAD/i), tot:c1(/^TOTAL/i), sal:c1(/^SALDO/i)};
+    const fechas=hdr.filter(x=>/^FECHA/i.test(x.s)).sort((a,b)=>a.x-b.x); if(fechas[0]) cols.fing=fechas[0].cx; if(fechas[1]) cols.vto=fechas[1].cx;
+    hdr.filter(x=>Math.abs(x.y-yH)<3 && /^\d{1,2}$/.test(x.s) && +x.s>=1 && +x.s<=31).forEach(x=>{ cols['d'+x.s]=x.cx; });
+    if(cols.ini==null || cols.sal==null) continue;
+    const dx=(cols.rec!=null?cols.rec-cols.ini:30), limNom=cols.ini-dx/2, codMax=hc.x+(hc.w||40)+12;
+    const cuerpo=it.filter(x=>x.y<yH-12 && !/^(Generado|Elaborado|Revisado|Vo\.)/i.test(x.s));
+    const pie=cuerpo.find(x=>/^Generado/i.test(x.s)); const yMin=pie?pie.y+4:-1e9;
+    const tots=cuerpo.filter(x=>/^TOTALES$/i.test(x.s)).map(x=>x.y);
+    const cuerpoOk=cuerpo.filter(x=>x.y>yMin && !tots.some(y=>Math.abs(y-x.y)<6));
+    const nums=[], nombres=[], cods=[], cats=[];
+    cuerpoOk.forEach(x=>{
+      if(x.cx>limNom){ let mejor=null, dm=1e9; for(const k in cols){ const d=Math.abs(cols[k]-x.cx); if(d<dm){ dm=d; mejor=k; } } nums.push(Object.assign({col:mejor},x)); }
+      else if(x.cx<codMax && /^\d{6,10}$/.test(x.s)) cods.push(x);
+      else if(x.b) cats.push(x); else nombres.push(x);
+    });
+    const anclas=nums.filter(x=>x.col==='sal' && numPdf(x.s)!==null).sort((a,b)=>b.y-a.y).map(a=>({y:a.y, c:'', n:[], v:{sal:a.s}}));
+    if(!anclas.length) continue;
+    const cerca=(y,lim)=>{ let m=null, dm=lim; anclas.forEach(a=>{ const d=Math.abs(a.y-y); if(d<dm){ dm=d; m=a; } }); return m; };
+    nums.forEach(x=>{ if(x.col==='sal') return; const a=cerca(x.y,6); if(a) a.v[x.col]=(a.v[x.col]?a.v[x.col]+' ':'')+x.s; });
+    cods.forEach(x=>{ const a=cerca(x.y,8); if(a) a.c=x.s; });
+    nombres.forEach(x=>{ const a=cerca(x.y,40); if(a) a.n.push(x); });
+    const grupos=[]; cats.sort((a,b)=>b.y-a.y).forEach(x=>{ const g=grupos.find(g=>Math.abs(g.y-x.y)<4); if(g) g.n+=' '+x.s; else grupos.push({y:x.y, n:x.s, cat:true}); });
+    const pagina=[...anclas, ...grupos].sort((a,b)=>b.y-a.y);
+    pagina.forEach(r=>{ if(r.cat){ filas.push({t:'c', n:r.n.replace(/\s+/g,' ').trim()}); return; }
+      const nom=r.n.sort((a,b)=>(b.y-a.y)||(a.x-b.x)).map(x=>x.s).join(' ').replace(/\s+/g,' ').trim();
+      const d=[]; for(let k=1;k<=31;k++) d.push(numPdf(r.v['d'+k]));
+      filas.push({t:'i', c:r.c, n:nom, ini:numPdf(r.v.ini), rec:numPdf(r.v.rec), fing:r.v.fing||'', vto:r.v.vto||'', d, tot:numPdf(r.v.tot), sal:numPdf(r.v.sal)}); });
+  }
+  if(!mid) throw new Error('No se encontró el mes en el PDF (“MES: …”). ¿Es la matriz de entradas y salidas impresa por este programa?');
+  if(!filas.some(f=>f.t==='i')) throw new Error('No se encontraron insumos en el PDF.');
+  const malos=filas.filter(f=>f.t==='i' && f.tot!=null && f.d.reduce((s,v)=>s+(v||0),0)!==f.tot);
+  return {mid, filas, malos};
+}
+/** Convierte lo leído del PDF en un mes y sus ingresos (vales) para el programa. */
+function mesDesdePDF(r){
+  const [y,m]=r.mid.split('-').map(Number), items=[], vales={};
+  r.filas.forEach((f,k)=>{ const id=r.mid+'-pdf'+k;
+    if(f.t==='c'){ items.push({id, t:'c', n:f.n}); return; }
+    const it={id, t:'i', n:f.n}; if(f.c) it.c=f.c; if(f.ini!=null) it.ini=f.ini;
+    const d=f.d.slice(); while(d.length && d[d.length-1]==null) d.pop(); if(d.length) it.d=d; items.push(it);
+    if(f.rec){ const fs=[...String(f.fing).matchAll(/(\d{1,2})\/(\d{1,2})/g)]; const dia=fs[0]?String(+fs[0][1]).padStart(2,'0'):'01';
+      const vm=String(f.vto).match(/(\d{1,2})\/(\d{4})/); const fecha=r.mid+'-'+dia;
+      (vales[fecha]=vales[fecha]||[]).push({id:nuevoId('l'), item:id, cant:f.rec, vto:vm?vm[2]+'-'+vm[1].padStart(2,'0'):'', obs:fs.length>1?'Ingresos '+fs.map(x=>x[1]+'/'+x[2]).join(' y ')+' (total en la matriz)':''}); } });
+  const vs=Object.keys(vales).sort().map(f=>({id:nuevoId('v'), num:'Ingreso según matriz '+f.slice(8)+'/'+f.slice(5,7), fecha:f, mes:r.mid, lineas:vales[f]}));
+  return {mes:{id:r.mid, nombre:MESES_N[m-1]+' '+y, items}, vales:vs};
+}
+async function importarMatrizPDFLocal(inp){
+  const fs=[...inp.files]; inp.value=''; const msg=document.getElementById('msgPdfMatriz'); if(!fs.length) return;
+  for(const f of fs){
+    try{ msg.innerHTML='⟳ Leyendo '+esc(f.name)+'…'; const r=await leerMatrizPDF(f), x=mesDesdePDF(r), ex=mes(x.mes.id);
+      const nIns=x.mes.items.filter(i=>i.t==='i').length;
+      if(ex && !confirm(`El PDF es de ${x.mes.nombre} (${nIns} insumos).\n${x.mes.nombre} ya existe en el programa: se REEMPLAZARÁN sus insumos, consumos e ingresos con los del PDF.\n\n¿Continuar?`)) { msg.textContent='Cancelado.'; continue; }
+      if(ex){ ex.items=x.mes.items; S.vales=S.vales.filter(v=>v.mes!==x.mes.id); }
+      else { S.meses.push(x.mes); S.meses.sort((a,b)=>a.id<b.id?-1:1); }
+      S.vales.push(...x.vales); guardar(); llenarMeses();
+      msg.innerHTML=`<span class="ok-msg">✅ ${esc(x.mes.nombre)} cargado desde el PDF: ${nIns} insumos, ${x.vales.reduce((s,v)=>s+v.lineas.length,0)} ingresos.${r.malos.length?` ⚠️ ${r.malos.length} fila(s) cuyo total no coincide con los días: revíselas.`:' Todos los totales coinciden con el PDF.'}</span>`;
+    }catch(e){ msg.innerHTML='<span class="neg">'+esc(f.name)+': '+esc(e.message||e)+'</span>'; }
+  }
+}
+
 /* ---------- EDITOR DE MATRIZ ---------- */
 let ED={sel:new Set(), foco:null, undo:[], zoom:1};
 try{ ED.zoom=Number(localStorage.getItem('bodegaEdZoom'))||1; }catch(e){}
@@ -3161,6 +3245,7 @@ new MutationObserver(ms=>{ const vistos=new Set(); ms.forEach(m=>{ if(m.target.c
   .observe(document.body,{childList:true,subtree:true});
 (()=>{ const e=document.getElementById('estado'); if(!e) return; let ult='';
   new MutationObserver(()=>{ const t=e.textContent; if(t!==ult && /Guardado|Sincronizado/.test(t)){ e.classList.remove('pulso'); void e.offsetWidth; e.classList.add('pulso'); } ult=t; }).observe(e,{childList:true,characterData:true,subtree:true}); })();
+if(window.top!==window.self){ try{ window.top.location=window.location.href; }catch(e){ document.documentElement.innerHTML=''; } }
 const VERSION_PROG='27/11/2026';
 function avisoNovedades(){ document.getElementById('verTxt').textContent='Versión '+VERSION_PROG;
   let vista=''; try{ vista=localStorage.getItem('bodegaVersionVista')||''; }catch(e){}
@@ -3270,18 +3355,22 @@ const _pintarCfg=pintarCfg; pintarCfg=function(){ _pintarCfg(); pintarUsuarios()
 function msgLogin(t,ok){ const m=document.getElementById('lgMsg'); m.innerHTML=t; m.className=ok?'ok-msg':(t?'aviso':''); }
 async function entrar(){ const em=document.getElementById('lgCorreo').value.trim(), pw=document.getElementById('lgClave').value;
   if(!em||!pw){ msgLogin('Escriba su correo y contraseña.'); return; }
+  const bloq=Number(sessionStorage.getItem('bodegaBloqueo')||0); if(Date.now()<bloq){ msgLogin('🔒 Demasiados intentos. Espere '+Math.ceil((bloq-Date.now())/1000)+' segundos.'); return; }
   msgLogin('Entrando…',true);
   const {error}=await sb.auth.signInWithPassword({email:em,password:pw});
-  if(error) msgLogin(error.message.includes('Email not confirmed')?'Primero confirme su correo con el enlace que le llegó.':'Correo o contraseña incorrectos.');
+  if(error){ const n=Number(sessionStorage.getItem('bodegaFallos')||0)+1; sessionStorage.setItem('bodegaFallos',n);
+    if(n>=5){ sessionStorage.setItem('bodegaBloqueo',Date.now()+60000*Math.min(10,n-4)); sessionStorage.setItem('bodegaFallos',0); }
+    msgLogin(error.message.includes('Email not confirmed')?'Primero confirme su correo con el enlace que le llegó.':'Correo o contraseña incorrectos.'); }
+  else sessionStorage.removeItem('bodegaFallos');
 }
 async function crearCuenta(){ const em=document.getElementById('lgCorreo').value.trim(), pw=document.getElementById('lgClave').value;
-  if(!em||pw.length<8){ msgLogin('Escriba su correo y una contraseña de al menos 8 caracteres.'); return; }
-  const {data,error}=await sb.auth.signUp({email:em,password:pw,options:{emailRedirectTo:location.origin}});
-  if(error){ msgLogin('No se pudo crear: '+esc(error.message)); return; }
+  if(!em || pw.length<10 || !/[A-Za-z]/.test(pw) || !/\d/.test(pw)){ msgLogin('Escriba su correo y una contraseña <b>segura</b>: al menos 10 caracteres, con letras y números.'); return; }
+  const {data,error}=await sb.auth.signUp({email:em,password:pw,options:{emailRedirectTo:location.origin+location.pathname}});
+  if(error){ msgLogin(/autorizado/i.test(error.message)?'🔒 Este correo no está autorizado. Pida al administrador que le dé acceso.':'No se pudo crear: '+esc(error.message)); return; }
   if(data.session) return; msgLogin('✅ Cuenta creada. <b>Revise su correo</b> y haga clic en el enlace para confirmarla; luego entre aquí con su correo y contraseña.',true);
 }
 async function olvido(){ const em=document.getElementById('lgCorreo').value.trim(); if(!em){ msgLogin('Escriba su correo arriba y vuelva a pulsar “Olvidé mi contraseña”.'); return; }
-  const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin}); msgLogin(error?esc(error.message):'Le enviamos un correo para cambiar la contraseña.',!error); }
+  const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname}); msgLogin(error?esc(error.message):'Le enviamos un correo para cambiar la contraseña.',!error); }
 async function salir(){ await sb.auth.signOut(); location.reload(); }
 let iniciado=false;
 async function arrancar(session){
@@ -3312,8 +3401,17 @@ async function activarCodigo(){
   location.reload();
 }
 async function importarInicial(inp){
-  const f=inp.files[0]; if(!f) return; const m=document.getElementById('msgImportar');
-  try{ const d=JSON.parse(await f.text()); if(!d.meses||!Array.isArray(d.meses)) throw new Error('El archivo no tiene el formato correcto.');
+  const fs=[...inp.files]; if(!fs.length) return; const m=document.getElementById('msgImportar');
+  try{ let d;
+    if(fs.every(f=>/\.pdf$/i.test(f.name)||f.type==='application/pdf')){
+      d={meses:[], vales:[], cuadres:{}, cfg:{}}; let avisos=[];
+      for(const f of fs){ m.textContent='⟳ Leyendo '+f.name+'…'; const r=await leerMatrizPDF(f), x=mesDesdePDF(r);
+        d.meses=d.meses.filter(mm=>mm.id!==x.mes.id).concat([x.mes]); d.vales=d.vales.filter(v=>v.mes!==x.mes.id).concat(x.vales);
+        if(r.malos.length) avisos.push(x.mes.nombre+': '+r.malos.length+' fila(s) para revisar'); }
+      d.meses.sort((a,b)=>a.id<b.id?-1:1);
+      if(avisos.length && !confirm('Se leyeron los PDF, pero hay filas cuyo total no coincide con los días:\n'+avisos.join('\n')+'\n\n¿Cargar de todos modos?')) throw new Error('Carga cancelada.');
+    } else { d=JSON.parse(await fs[0].text()); if(d.datos && d.datos.meses) d=d.datos; }
+    if(!d.meses||!Array.isArray(d.meses)||!d.meses.length) throw new Error('El archivo no tiene el formato correcto.');
     m.textContent='Subiendo datos… no cierre la página.';
     S=d; normalizar(); SNAP=vacio(); await sincronizar();
     if(!SNAP.meses.size) throw new Error('No se pudieron guardar los datos. Revise la conexión e intente de nuevo.');
@@ -3321,12 +3419,9 @@ async function importarInicial(inp){
   }catch(e){ m.innerHTML='<span class="neg">'+esc(e.message||e)+'</span>'; }
   inp.value='';
 }
-/* cierre de sesión por inactividad (30 minutos) */
-let ultimaActividad=Date.now();
-['mousemove','keydown','click','touchstart','scroll'].forEach(ev=>window.addEventListener(ev,()=>{ ultimaActividad=Date.now(); },{passive:true}));
-setInterval(()=>{ if(usuario && Date.now()-ultimaActividad>30*60*1000 && !syncando && !pendiente){ alert('Por seguridad se cerró la sesión por 30 minutos sin uso.'); salir(); } }, 60*1000);
+/* la sesión queda abierta hasta que el usuario pulse "Salir" */
 sb.auth.onAuthStateChange((ev, session)=>{
-  if(ev==='PASSWORD_RECOVERY'){ const pw=prompt('Escriba su nueva contraseña (mínimo 8 caracteres):'); if(pw&&pw.length>=8) sb.auth.updateUser({password:pw}).then(r=>alert(r.error?r.error.message:'✅ Contraseña cambiada.')); }
+  if(ev==='PASSWORD_RECOVERY'){ const pw=prompt('Escriba su nueva contraseña (al menos 10 caracteres, con letras y números):'); if(pw&&pw.length>=10&&/[A-Za-z]/.test(pw)&&/\d/.test(pw)) sb.auth.updateUser({password:pw}).then(r=>alert(r.error?r.error.message:'✅ Contraseña cambiada.')); }
   if(ev==='INITIAL_SESSION'||ev==='SIGNED_IN') arrancar(session);
   if(ev==='SIGNED_OUT') location.reload();
 });
