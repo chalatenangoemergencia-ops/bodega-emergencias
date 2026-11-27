@@ -1,0 +1,46 @@
+name: Compilar programa de escritorio (Windows)
+
+on:
+  push:
+    paths:
+      - 'escritorio/**'
+      - '.github/workflows/compilar-exe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Instalar dependencias
+        run: pip install pyinstaller==6.11.1 reportlab==4.2.5
+      - name: Compilar BodegaEmergencias.exe
+        run: pyinstaller --noconfirm --onefile --windowed --name BodegaEmergencias --icon escritorio/bodega.ico --add-data "escritorio/logo.png;." --add-data "escritorio/bodega.ico;." escritorio/bodega.py
+      - name: Autoprueba del exe (genera documentos de ejemplo)
+        shell: pwsh
+        run: |
+          $d = Join-Path $env:RUNNER_TEMP 'autoprueba'
+          $p = Start-Process -FilePath 'dist\BodegaEmergencias.exe' -ArgumentList '--autoprueba', $d -Wait -PassThru
+          Get-ChildItem -Recurse $d | Select-Object FullName, Length | Format-Table -AutoSize
+          if (Test-Path (Join-Path $d 'ERROR.txt')) { Get-Content (Join-Path $d 'ERROR.txt') }
+          $r = Get-Content (Join-Path $d 'RESULTADO.txt')
+          Write-Host "Resultado: $r (codigo $($p.ExitCode))"
+          if ($r -ne 'OK') { exit 1 }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BodegaEmergencias-exe
+          path: dist/BodegaEmergencias.exe
+      - name: Publicar el exe para descargar
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: escritorio-v1
+          name: Sistema de Bodega de Emergencias - programa de escritorio
+          body: Programa para Windows (Python + Tkinter). Doble clic en BodegaEmergencias.exe. No incluye datos.
+          files: dist/BodegaEmergencias.exe
+          make_latest: true
