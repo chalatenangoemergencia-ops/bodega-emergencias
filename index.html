@@ -2,11 +2,19 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d2347">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bodega Emergencias">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src https://djieropayuzlwjuegopb.supabase.co wss://djieropayuzlwjuegopb.supabase.co; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
 <title>Bodega Emergencias en línea</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icono-180.png">
+<link rel="icon" type="image/png" href="icono-192.png">
 <script src="supabase.min.js"></script>
 <style>
 :root{
@@ -2821,6 +2829,85 @@ nav{top:48px!important}
 .nav-grupo{font-size:10.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#8fa6c9;padding:10px 12px 3px}
 nav .fuera-area{display:none!important}
 @media (max-width:900px){.areas{display:flex;grid-template-columns:none;border:0;padding:0 6px 0 0;margin:0}.area{flex-direction:row;gap:4px;white-space:nowrap}.nav-grupo{display:none}}
+</style>
+<style id="estiloMovil">
+/* ===== Versión para celular (iPhone y Android). En PC y laptop no cambia nada. ===== */
+.mv-menu,.mv-barra,.mv-velo,.mv-instalar{display:none}
+@media screen and (max-width:760px){
+  html,body{overflow-x:hidden;-webkit-text-size-adjust:100%}
+  body{padding-bottom:env(safe-area-inset-bottom)}
+  /* encabezado compacto */
+  header.app{height:52px!important;padding:0 8px!important;gap:6px!important;padding-top:env(safe-area-inset-top)!important}
+  header.app img{height:28px!important;padding:2px 4px!important}
+  header.app>div:not(.campana):not([id]){min-width:0;flex:1 1 auto}
+  header.app h1{font-size:14.5px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  header.app .sub,header.app #btnSyncTop,header.app .estado{display:none!important}
+  header.app .campana{margin:0!important}
+  .pf-chip{padding:2px!important}.pf-chip .t{display:none!important}
+  .mv-menu{display:flex;align-items:center;justify-content:center;flex:none;width:38px;height:38px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);color:#fff;font-size:20px;cursor:pointer}
+  /* menú lateral que se abre con ☰ */
+  nav{position:fixed!important;top:0!important;left:0!important;bottom:0!important;width:min(86vw,330px)!important;height:100%!important;flex-direction:column!important;flex-wrap:nowrap!important;
+    overflow-y:auto!important;overflow-x:hidden!important;padding:calc(14px + env(safe-area-inset-top)) 10px 100px!important;z-index:400!important;transform:translateX(-105%);transition:transform .25s ease;box-shadow:8px 0 30px rgba(0,0,0,.35)}
+  body.mv-abierto nav{transform:none}
+  .mv-velo{display:block;position:fixed;inset:0;background:rgba(5,15,35,.5);z-index:390;opacity:0;pointer-events:none;transition:opacity .25s}
+  body.mv-abierto .mv-velo{opacity:1;pointer-events:auto}
+  body.mv-abierto{overflow:hidden}
+  nav .areas{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;padding:2px 2px 10px!important;margin:0 0 6px!important;border-bottom:1px solid rgba(255,255,255,.12)!important}
+  nav .area{flex-direction:column!important;padding:10px 4px!important;font-size:12px!important}
+  nav .nav-grupo{display:block!important}
+  nav button[data-v]{padding:12px 14px!important;font-size:15px!important;border-radius:10px}
+  .mv-instalar{display:block;margin:14px 4px 0;padding:12px;border-radius:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#dfe7f5;font-size:12.5px}
+  .mv-instalar button{margin-top:8px;width:100%;padding:10px;border:0;border-radius:10px;background:linear-gradient(135deg,#21c38a,#12925f);color:#fff;font-weight:700;font-size:14px}
+  /* contenido */
+  main{margin-left:0!important;padding:10px 10px calc(84px + env(safe-area-inset-bottom))!important;max-width:100vw!important;min-width:0}
+  .panel{padding:12px!important;border-radius:14px!important;max-width:100%;overflow-x:auto}
+  .vista>*{max-width:100%}
+  .fila{flex-wrap:wrap!important;gap:8px!important}
+  .campo{min-width:0!important;flex:1 1 140px!important;max-width:none!important}
+  input:not([type=checkbox]):not([type=radio]),select,textarea{font-size:16px!important}
+  .doc input,.ed-tabla input,table.pl-t input,table.tb-t input{font-size:15px!important}
+  .btn{min-height:40px}.btn.sm{min-height:34px}
+  table.lista{font-size:12.5px}
+  .ed-barra,.pl-barra{position:static!important}
+  .ed-top #edBus{width:100%!important;flex:1 1 100%}.ed-top #edMes{flex:1 1 60%}
+  .ed-wrap{max-height:calc(100vh - 170px)!important}
+  #vistaEd.plegado .ed-wrap{max-height:calc(100vh - 150px)!important}
+  .ed-tools{gap:6px!important}
+  .pl-top{gap:6px!important}.pl-top .pl-esp{display:none}.pl-tit{flex:1 1 100%}
+  .pl-grid4,.tb-cols,.inf-grid,#tbAct .pl-grid4{grid-template-columns:1fr!important}
+  .pl-caja[style*="span"]{grid-column:auto!important}
+  .pl-prev,.tb-prev{padding:8px!important;border-radius:12px!important}
+  .sol-tabs{flex-wrap:nowrap!important;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+  .sol-tab{flex:none!important;white-space:nowrap}
+  .tb-fila{padding:7px 10px}.tb-fila input{width:84px;padding:8px}.tb-fila .mas{min-width:36px;min-height:36px;font-size:16px}
+  .tb-dia-top .fecha{min-width:0;flex:1 1 100%;order:-1;font-size:16px}
+  .sol-it input{width:88px}
+  .kpis,.kpi-grid{grid-template-columns:1fr 1fr!important}
+  /* ventanas como hoja inferior */
+  .pl-pop{left:8px!important;right:8px!important;width:auto!important;top:auto!important;bottom:calc(72px + env(safe-area-inset-bottom))!important;max-height:70vh;overflow:auto}
+  .pf-panel,.campana-panel{position:fixed!important;left:8px!important;right:8px!important;width:auto!important;top:58px!important}
+  .toast{left:10px!important;right:10px!important;bottom:calc(78px + env(safe-area-inset-bottom))!important;max-width:none!important}
+  /* barra inferior con los accesos más usados */
+  .mv-barra{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:350;background:#fff;border-top:1px solid #e3e9f2;
+    box-shadow:0 -6px 20px rgba(16,34,68,.12);padding:4px 4px calc(4px + env(safe-area-inset-bottom))}
+  .mv-barra button{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 2px;font-size:10.5px;font-weight:600;color:#5d6b82;border-radius:12px;font-family:inherit}
+  .mv-barra button i{font-style:normal;font-size:20px;line-height:1.1}
+  .mv-barra button.on{color:#173a6e;background:linear-gradient(135deg,#e8f1ff,#eefbfd)}
+  .mv-barra button.hidden{display:none}
+  body:has(#login:not(.hidden)) .mv-barra,body:has(#cargando:not(.hidden)) .mv-barra,body:has(#importar:not(.hidden)) .mv-barra,body:has(#sinAcceso:not(.hidden)) .mv-barra,body:has(#login:not(.hidden)) .mv-menu{display:none!important}
+  body.mv-abierto .mv-barra{z-index:380}
+  /* tablas anchas: nombre más angosto para que se vean las cantidades */
+  table.grid td.nom{min-width:150px!important;max-width:150px!important;font-size:11px!important;line-height:1.2}
+  table.grid input{width:46px!important;padding:8px 2px!important}
+  .ed-tabla td.cod,.ed-tabla th.cod,.ed-tabla td.fini,.ed-tabla th.fini,.ed-tabla td.frec,.ed-tabla th.frec{position:static!important;box-shadow:none!important}
+  .ed-tabla thead th.cod,.ed-tabla thead th.fini,.ed-tabla thead th.frec{position:sticky!important;top:0;left:auto!important}
+  .ed-tabla td.nom,.ed-tabla th.nom{left:32px!important;min-width:calc(165px*var(--ez))!important;max-width:calc(165px*var(--ez))!important;font-size:calc(11.5px*var(--ez))!important;box-shadow:3px 0 0 #c9d5e8}
+  .ed-tabla .cod{display:none!important}
+  .ed-tabla td.chk,.ed-tabla th.chk{width:32px!important;min-width:32px!important}
+  .ed-tabla td.ftot,.ed-tabla th.ftot,.ed-tabla td.fsal,.ed-tabla th.fsal{position:static!important;box-shadow:none!important;min-width:calc(62px*var(--ez))!important;max-width:none!important}
+  .ed-tabla thead th.ftot,.ed-tabla thead th.fsal{position:sticky!important;top:0;right:auto!important;left:auto!important}
+}
+@media print{.mv-menu,.mv-barra,.mv-velo,.mv-instalar{display:none!important}}
 </style>
 </head>
 <body>
@@ -5851,6 +5938,7 @@ function montarAreas(){
   bar.addEventListener('keydown',e=>{ if(e.key==='Enter'){ const s=e.target.closest('.area'); if(s) ponerArea(s.dataset.area,true); } });
   nav.addEventListener('click',e=>{ const b=e.target.closest('button[data-v]'); if(b && b.dataset.area!==AREA) ponerArea(b.dataset.area,false); });
   let a='bod'; try{ a=localStorage.getItem('bodegaArea')||'bod'; }catch(e){} ponerArea(a, true);
+  try{ montarMovil(); }catch(e){ console.warn(e); }
 }
 function ponerArea(id, abrir){
   AREA=AREAS.some(a=>a.id===id)?id:'bod'; try{ localStorage.setItem('bodegaArea',AREA); }catch(e){}
@@ -5859,6 +5947,44 @@ function ponerArea(id, abrir){
   nav.querySelectorAll('[data-area]:not(.area)').forEach(x=>x.classList.toggle('fuera-area',x.dataset.area!==AREA));
   if(abrir && areaDe(vistaActual())!==AREA){ const a=AREAS.find(x=>x.id===AREA); irA(a.grupos[0][1][0]); }
 }
+
+/* ---------- versión para celular: menú ☰, barra inferior e instalación como app ---------- */
+let MV_INSTALAR=null;
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); MV_INSTALAR=e; });
+function montarMovil(){
+  const hdr=document.querySelector('header.app'), nav=document.getElementById('nav'); if(!hdr||!nav||document.getElementById('mvMenu')) return;
+  const b=document.createElement('button'); b.id='mvMenu'; b.className='mv-menu'; b.type='button'; b.title='Menú'; b.setAttribute('aria-label','Abrir menú'); b.textContent='☰'; hdr.prepend(b);
+  const velo=document.createElement('div'); velo.className='mv-velo'; document.body.appendChild(velo);
+  const abrir=on=>document.body.classList.toggle('mv-abierto',on);
+  b.onclick=()=>abrir(!document.body.classList.contains('mv-abierto')); velo.onclick=()=>abrir(false);
+  nav.addEventListener('click',e=>{ if(e.target.closest('button[data-v]')){ abrir(false); setTimeout(()=>{ mvActualizar(); window.scrollTo(0,0); },0); } });
+  // instalar en el celular
+  const ins=document.createElement('div'); ins.className='mv-instalar';
+  ins.innerHTML='📲 <b>Usar como app</b><br>Póngalo en la pantalla de inicio del celular para abrirlo con un toque.<button type="button">Instalar en este celular</button>';
+  ins.querySelector('button').onclick=async()=>{ if(MV_INSTALAR){ MV_INSTALAR.prompt(); try{ await MV_INSTALAR.userChoice; }catch(e){} MV_INSTALAR=null; return; }
+    const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+    alert(ios?'En iPhone:\n1) Abra esta página en Safari.\n2) Toque el botón Compartir (cuadro con flecha ↑).\n3) Elija “Agregar a pantalla de inicio”.'
+             :'En Android:\n1) Abra esta página en Chrome.\n2) Toque el menú ⋮ (arriba a la derecha).\n3) Elija “Instalar app” o “Agregar a pantalla principal”.'); };
+  nav.appendChild(ins);
+  // barra inferior
+  const accesos=[['vistaInicio','🏠','Inicio'],['vistaConsumo','📅','Consumo'],['vistaSol','📝','Retiro'],['vistaTab','📊','Tabulador']];
+  const bar=document.createElement('div'); bar.className='mv-barra'; bar.id='mvBarra';
+  bar.innerHTML=accesos.map(([v,i,t])=>`<button type="button" data-ir="${v}"><i>${i}</i>${t}</button>`).join('')+'<button type="button" data-ir="menu"><i>☰</i>Más</button>';
+  bar.addEventListener('click',e=>{ const x=e.target.closest('button'); if(!x) return; const v=x.dataset.ir;
+    if(v==='menu'){ abrir(!document.body.classList.contains('mv-abierto')); return; }
+    abrir(false); try{ ponerArea(areaDe(v),false); }catch(er){} irA(v); window.scrollTo(0,0); mvActualizar(); });
+  document.body.appendChild(bar);
+  // si cambian permisos o áreas (en línea), la barra muestra solo lo permitido
+  new MutationObserver(()=>mvActualizar()).observe(nav,{subtree:true,attributes:true,attributeFilter:['class']});
+  // en el celular la barra de opciones del editor empieza oculta (se abre con ⚙ Opciones)
+  if(matchMedia('(max-width:760px)').matches){ try{ edPlegar(true); }catch(e){} }
+  mvActualizar();
+}
+function mvActualizar(){ const bar=document.getElementById('mvBarra'); if(!bar) return; let act=''; try{ act=vistaActual(); }catch(e){}
+  bar.querySelectorAll('button[data-ir]').forEach(x=>{ const v=x.dataset.ir; if(v==='menu') return; const nb=document.querySelector(`nav button[data-v="${v}"]`);
+    const oculto=!nb||nb.classList.contains('hidden')||nb.classList.contains('sin-area'); if(x.classList.contains('hidden')!==oculto) x.classList.toggle('hidden',oculto);
+    if(x.classList.contains('on')!==(v===act)) x.classList.toggle('on',v===act); });
+  const vis=bar.querySelectorAll('button:not(.hidden)').length; bar.style.gridTemplateColumns=`repeat(${vis},1fr)`; }
 
 /* ---------- EDITOR DE MATRIZ ---------- */
 let ED={sel:new Set(), foco:null, undo:[], zoom:1};
@@ -6927,6 +7053,8 @@ function avisoNovedades(){
   document.addEventListener('click',e=>{ if(!w.contains(e.target)) pan.classList.add('hidden'); });
 }
 try{ montarAreas(); }catch(e){}
+/* app instalable en el celular (iPhone y Android) */
+if('serviceWorker' in navigator && location.protocol==='https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
 /* ================= VERSIÓN EN LÍNEA (Supabase) ================= */
 const SB_URL='https://djieropayuzlwjuegopb.supabase.co', SB_KEY='sb_publishable_trj7n_Oco0odCJ0-ln9bBQ_o0Zly5jF';
 const sb = supabase.createClient(SB_URL, SB_KEY);
