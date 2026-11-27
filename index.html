@@ -340,6 +340,15 @@ table.pl-t tr.filasel td.aus{filter:saturate(1.4) brightness(.97)}
 }
 </style>
 <style id="estiloTab">
+.tb-add{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;background:#f7f9fd}
+.tb-ed-lista{max-height:380px;overflow:auto;border:1px solid #e3e9f2;border-radius:10px;background:#fff}
+.tb-ed-f{display:flex;align-items:center;gap:5px;padding:4px 6px;border-bottom:1px solid #eef2f8}
+.tb-ed-f input{padding:4px 7px;font-size:12.5px}.tb-ed-f .btn.sm{padding:2px 7px}
+.tb-ed-f.sec{background:#eef3fb}.tb-ed-f.sec input{font-weight:800;color:#173a6e}
+.tb-tag{font-size:10px;font-weight:800;text-transform:uppercase;border-radius:6px;padding:2px 6px;min-width:58px;text-align:center}
+.tb-tag.act{background:#e6f4ea;color:#1a7f37}.tb-tag.sec{background:#dde7fb;color:#173a6e}.tb-tag.libre{background:#f1f1f4;color:#6b7280}
+.tb-ed .tb-add{background:none;padding:8px 0 0}
+#tbAct .pl-grid4{grid-template-columns:repeat(auto-fill,minmax(430px,1fr))}.tb-ed-f input{min-width:0}.tb-ed-f .btn.sm{flex:none}
 .tb-dia-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .tb-dia-top .fecha{font-size:18px;font-weight:800;color:#173a6e;min-width:260px;text-align:center}
 .tb-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px}
@@ -5580,7 +5589,8 @@ function tbPintarDia(){
       if(f.startsWith('#')) return `<div class="tb-sec">${plE(f.slice(1))}</div>`;
       const v=tbVal(M,h,r,d), tot=tbTotal(M,h,r);
       const nom=f==='+'?`<input class="tb-libre" data-lib="${h}|${r}" value="${plE(M.nombres[h+'|'+r]||'')}" placeholder="(otra actividad)">`:plE(f);
-      return `<div class="tb-fila"><div class="n">${nom}</div><button class="mas" data-h="${h}" data-r="${r}" data-s="-1" tabindex="-1">−</button><input data-h="${h}" data-r="${r}" class="${v?'lleno':''}" value="${plE(v)}" inputmode="numeric"><button class="mas" data-h="${h}" data-r="${r}" data-s="1" tabindex="-1">+</button><span class="acum" title="Acumulado del mes">Σ ${tot===''?'—':tot}</span></div>`; }).join('')}</div>`;
+      return `<div class="tb-fila"><div class="n">${nom}</div><button class="mas" data-h="${h}" data-r="${r}" data-s="-1" tabindex="-1">−</button><input data-h="${h}" data-r="${r}" class="${v?'lleno':''}" value="${plE(v)}" inputmode="numeric"><button class="mas" data-h="${h}" data-r="${r}" data-s="1" tabindex="-1">+</button><span class="acum" title="Acumulado del mes">Σ ${tot===''?'—':tot}</span></div>`; }).join('')}
+    <div class="tb-add"><button class="btn sm" data-addact="${h}">➕ Agregar actividad</button><button class="btn sm" data-addsec="${h}">➕ Agregar sección</button></div></div>`;
   document.getElementById('tbZona').innerHTML=`<div class="panel"><div class="tb-dia-top"><button class="btn" id="tbAnt">◀ Día anterior</button><div class="fecha">${dn} ${d} de ${PL_MES[+TB_MID.slice(5)-1].toLowerCase()} ${TB_MID.slice(0,4)}</div><button class="btn" id="tbSig">Día siguiente ▶</button>
       <select id="tbDiaSel">${Array.from({length:dm},(_,i)=>`<option value="${i+1}"${i+1===d?' selected':''}>Día ${i+1}</option>`).join('')}</select><button class="btn sm" id="tbHoy">Hoy</button>
       <span class="pl-esp"></span><span class="muted">Escriba la cantidad y pulse Enter para bajar. Se guarda solo. “-” = ninguno.</span></div>
@@ -5593,6 +5603,8 @@ function tbPintarDia(){
     inp.onfocus=()=>inp.select(); });
   z.querySelectorAll('.mas').forEach(b=>b.onclick=()=>{ const h=+b.dataset.h, r=+b.dataset.r, v=Math.max(0,tbNum(tbVal(M,h,r,d))+Number(b.dataset.s)); tbSet(M,h,r,d,v||''); guardar(); const i=z.querySelector(`.tb-fila input[data-h="${h}"][data-r="${r}"]`); i.value=v||''; refrescar(); });
   z.querySelectorAll('[data-lib]').forEach(i=>i.onchange=()=>{ M.nombres[i.dataset.lib]=i.value.trim(); guardar(); });
+  z.querySelectorAll('[data-addact]').forEach(b=>b.onclick=()=>tbAgregarFila(+b.dataset.addact,'act'));
+  z.querySelectorAll('[data-addsec]').forEach(b=>b.onclick=()=>tbAgregarFila(+b.dataset.addsec,'sec'));
   const ir=n=>{ TB_DIA=Math.max(1,Math.min(dm,n)); tbPintarDia(); };
   z.querySelector('#tbAnt').onclick=()=>ir(d-1); z.querySelector('#tbSig').onclick=()=>ir(d+1); z.querySelector('#tbDiaSel').onchange=e=>ir(+e.target.value);
   z.querySelector('#tbHoy').onclick=()=>{ const h=new Date(), hid=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0'); if(hid!==TB_MID){ document.getElementById('tbMesSel').value=String(h.getMonth()+1); document.getElementById('tbAnio').value=h.getFullYear(); TB_MID=hid; tbMes(hid); } ir(h.getDate()); };
@@ -5645,18 +5657,59 @@ function tbImprimir(){
   window.addEventListener('afterprint',fin,{once:true}); window.print(); setTimeout(fin,1500);
 }
 /* ---- actividades (modelo) ---- */
+/* cambia las filas de una hoja conservando los datos: mapa[nuevaPos] = posición anterior (o -1 si es nueva) */
+function tbCambiarFilas(h, filas, mapa){ const T=tbBase(), viejas=T.modelo.hojas[h].filas;
+  Object.values(T.meses).forEach(M=>{ const V=(M.hojas[h]||{valores:{}}).valores, N=M.nombres||{}, nv={}, nn={};
+    Object.keys(V).forEach(k=>{ if(!k.startsWith('+')) nv[k]=V[k]; });
+    Object.keys(N).forEach(k=>{ if(!k.startsWith(h+'|')) nn[k]=N[k]; });
+    filas.forEach((f,i)=>{ const o=mapa[i]; if(f!=='+'||o<0||viejas[o]!=='+') return; if(V['+'+o]) nv['+'+i]=V['+'+o]; if(N[h+'|'+o]) nn[h+'|'+i]=N[h+'|'+o]; });
+    if(M.hojas[h]) M.hojas[h].valores=nv; M.nombres=nn; });
+  T.modelo.hojas[h].filas=filas; }
+function tbRenombrar(h, viejo, nuevo){ const T=tbBase();
+  Object.values(T.meses).forEach(M=>{ const V=(M.hojas[h]||{}).valores; if(V&&V[viejo]!==undefined&&V[nuevo]===undefined){ V[nuevo]=V[viejo]; delete V[viejo]; } });
+  (T.modelo.vinculos||[]).forEach(v=>{ if(v[0]===h){ if(v[1]===viejo) v[1]=nuevo; if(v[2]===viejo) v[2]=nuevo; } }); }
+function tbAgregarFila(h, tipo){ const T=tbBase(), hj=T.modelo.hojas[h];
+  let f='+'; if(tipo!=='libre'){ const n=prompt(tipo==='sec'?'Nombre de la nueva sección (ej.: OTRAS ACTIVIDADES):':'Nombre de la nueva actividad:'); if(!n||!n.trim()) return; f=(tipo==='sec'?'#'+n.trim().toUpperCase():n.trim());
+    if(hj.filas.includes(f)){ alert('Esa actividad ya existe en esta hoja.'); return; } }
+  // se agrega antes de las filas libres del final
+  let pos=hj.filas.length; while(pos>0 && hj.filas[pos-1]==='+') pos--; if(tipo==='libre') pos=hj.filas.length;
+  const filas=hj.filas.slice(), mapa=filas.map((_,i)=>i); filas.splice(pos,0,f); mapa.splice(pos,0,-1);
+  tbCambiarFilas(h, filas, mapa); guardar(); pintarTab(); toast('✅ '+(tipo==='sec'?'Sección':tipo==='libre'?'Fila libre':'Actividad')+' agregada en “'+plE(hj.titulo)+'”','ok'); }
 function tbPintarAct(){ const T=tbBase(), box=document.getElementById('tbAct');
-  box.innerHTML=`<h2 style="font-size:15px;margin-top:0">⚙ Actividades del tabulador</h2><div class="pl-grid4">${T.modelo.hojas.map((hj,h)=>`<div class="pl-caja"><h3><input data-ht="${h}" value="${plE(hj.titulo)}" style="width:100%;font-weight:700"></h3>
-    <textarea data-hf="${h}" rows="14" style="width:100%;font:12.5px/1.5 Arial">${plE(hj.filas.join('\n'))}</textarea>
-    <label class="pl-chk"><input type="checkbox" data-hg="${h}" ${hj.guiones?'checked':''}> Poner “-” en los días ya registrados sin dato</label></div>`).join('')}
+  const tipoDe=f=>f==='+'?'libre':(f.startsWith('#')?'sec':'act');
+  box.innerHTML=`<div class="fila" style="align-items:center;margin-bottom:8px"><h2 style="font-size:15px;margin:0">⚙ Actividades del tabulador</h2><span class="pl-esp" style="flex:1"></span>
+      <button class="btn sm" id="tbAddHoja">➕ Agregar otra hoja</button><button class="btn sm" id="tbActX">Cerrar</button></div>
+    <div class="pl-grid4">${T.modelo.hojas.map((hj,h)=>`<div class="pl-caja tb-ed"><h3 style="display:flex;gap:6px"><input data-ht="${h}" value="${plE(hj.titulo)}" style="flex:1;font-weight:700">${T.modelo.hojas.length>1?`<button class="btn del sm" data-delhoja="${h}" title="Eliminar esta hoja">🗑</button>`:''}</h3>
+      <div class="tb-ed-lista">${hj.filas.map((f,r)=>{ const t=tipoDe(f); return `<div class="tb-ed-f ${t}"><span class="tb-tag ${t}">${t==='sec'?'Sección':t==='libre'?'Libre':'Actividad'}</span>
+        ${t==='libre'?'<span class="muted" style="flex:1;font-size:12px">(fila en blanco: se escribe la actividad cada mes)</span>':`<input data-ren="${h}|${r}" value="${plE(t==='sec'?f.slice(1):f)}" style="flex:1">`}
+        <button class="btn sm" data-mv="${h}|${r}|-1" title="Subir">▲</button><button class="btn sm" data-mv="${h}|${r}|1" title="Bajar">▼</button><button class="btn del sm" data-del="${h}|${r}" title="Quitar">✖</button></div>`; }).join('')}</div>
+      <div class="tb-add"><button class="btn sm" data-addact="${h}">➕ Actividad</button><button class="btn sm" data-addsec="${h}">➕ Sección</button><button class="btn sm" data-addlib="${h}">➕ Fila libre</button></div>
+      <label class="pl-chk" style="margin-top:6px"><input type="checkbox" data-hg="${h}" ${hj.guiones?'checked':''}> Poner “-” en los días ya registrados sin dato</label></div>`).join('')}
     <div class="pl-caja"><h3>Encabezado</h3><div class="campo" style="max-width:none"><label>Ministerio</label><input id="tbCMin" value="${plE(T.cfg.ministerio)}"></div>
-      <div class="campo" style="max-width:none"><label>Establecimiento</label><input id="tbCEst" value="${plE(T.cfg.establecimiento)}"></div><div class="campo" style="max-width:none"><label>Servicio</label><input id="tbCSer" value="${plE(T.cfg.servicio)}"></div></div></div>
-    <p class="muted">Una actividad por línea. <b>#TEXTO</b> = título de sección (ej. #EDUCATIVAS). <b>+</b> = fila libre para escribir otra actividad en el mes. Si cambia el nombre de una actividad, los datos ya guardados con el nombre anterior se conservan con ese nombre.</p>
-    <button class="btn ok" id="tbActOk">💾 Guardar actividades</button>`;
-  box.querySelector('#tbActOk').onclick=()=>{ box.querySelectorAll('[data-hf]').forEach(ta=>{ const h=+ta.dataset.hf; T.modelo.hojas[h].filas=ta.value.split('\n').map(x=>x.trim()).filter(Boolean); });
-    box.querySelectorAll('[data-ht]').forEach(i=>T.modelo.hojas[+i.dataset.ht].titulo=i.value); box.querySelectorAll('[data-hg]').forEach(i=>T.modelo.hojas[+i.dataset.hg].guiones=i.checked);
-    T.cfg.ministerio=box.querySelector('#tbCMin').value; T.cfg.establecimiento=box.querySelector('#tbCEst').value; T.cfg.servicio=box.querySelector('#tbCSer').value;
-    guardar(); box.classList.add('hidden'); pintarTab(); toast('✅ Actividades guardadas','ok'); };
+      <div class="campo" style="max-width:none"><label>Establecimiento</label><input id="tbCEst" value="${plE(T.cfg.establecimiento)}"></div><div class="campo" style="max-width:none"><label>Servicio</label><input id="tbCSer" value="${plE(T.cfg.servicio)}"></div>
+      <div class="campo" style="max-width:none"><label>Título</label><input id="tbCTit" value="${plE(T.modelo.titulo||'TABULADOR DIARIO DE ENFERMERÍA')}"></div></div></div>
+    <p class="muted" style="margin-bottom:0">Los cambios se guardan solos. Al cambiar el nombre de una actividad sus datos se conservan. <b>Sección</b> = título en negrita (ej. EDUCATIVAS). <b>Fila libre</b> = renglón en blanco para escribir otra actividad en el mes. Cada hoja sale en una página del PDF.</p>`;
+  const listo=()=>{ guardar(); tbPintarAct(); if(TB_MODO==='dia') tbPintarDia(); else tbPintarMes(); };
+  box.querySelector('#tbActX').onclick=()=>box.classList.add('hidden');
+  box.querySelector('#tbAddHoja').onclick=()=>{ const n=prompt('Título de la nueva hoja:','Hoja '+(T.modelo.hojas.length+1)+' - Otras actividades'); if(!n) return; T.modelo.hojas.push({titulo:n.trim(), filas:['+','+','+'], guiones:false}); Object.values(T.meses).forEach(M=>M.hojas.push({valores:{}})); listo(); toast('✅ Hoja agregada: agregue sus actividades','ok'); };
+  box.querySelectorAll('[data-delhoja]').forEach(b=>b.onclick=()=>{ const h=+b.dataset.delhoja; if(!confirm('¿Eliminar la hoja “'+T.modelo.hojas[h].titulo+'” y sus datos de todos los meses?')) return;
+    T.modelo.hojas.splice(h,1); Object.values(T.meses).forEach(M=>{ M.hojas.splice(h,1); const nn={}; Object.entries(M.nombres||{}).forEach(([k,v])=>{ const [hh,r]=k.split('|').map(Number); if(hh<h) nn[k]=v; else if(hh>h) nn[(hh-1)+'|'+r]=v; }); M.nombres=nn; });
+    T.modelo.vinculos=(T.modelo.vinculos||[]).filter(v=>v[0]!==h).map(v=>v[0]>h?[v[0]-1,v[1],v[2]]:v); listo(); });
+  box.querySelectorAll('[data-ht]').forEach(i=>i.onchange=()=>{ T.modelo.hojas[+i.dataset.ht].titulo=i.value.trim()||T.modelo.hojas[+i.dataset.ht].titulo; listo(); });
+  box.querySelectorAll('[data-hg]').forEach(i=>i.onchange=()=>{ T.modelo.hojas[+i.dataset.hg].guiones=i.checked; listo(); });
+  box.querySelectorAll('[data-ren]').forEach(i=>i.onchange=()=>{ const [h,r]=i.dataset.ren.split('|').map(Number), hj=T.modelo.hojas[h], viejo=hj.filas[r], sec=viejo.startsWith('#');
+    const nuevo=(sec?'#'+i.value.trim().toUpperCase():i.value.trim()); if(!i.value.trim()||nuevo===viejo){ listo(); return; } if(hj.filas.includes(nuevo)){ alert('Ya existe una fila con ese nombre.'); listo(); return; }
+    if(!sec) tbRenombrar(h,viejo,nuevo); hj.filas[r]=nuevo; listo(); });
+  box.querySelectorAll('[data-mv]').forEach(b=>b.onclick=()=>{ const [h,r,s]=b.dataset.mv.split('|').map(Number), j=r+s, hj=T.modelo.hojas[h]; if(j<0||j>=hj.filas.length) return;
+    const filas=hj.filas.slice(), mapa=filas.map((_,i)=>i); [filas[r],filas[j]]=[filas[j],filas[r]]; [mapa[r],mapa[j]]=[mapa[j],mapa[r]]; tbCambiarFilas(h,filas,mapa); listo(); });
+  box.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ const [h,r]=b.dataset.del.split('|').map(Number), hj=T.modelo.hojas[h], f=hj.filas[r];
+    if(!confirm('¿Quitar “'+(f==='+'?'fila libre':f.replace(/^#/,''))+'” del tabulador?'+(f.startsWith('#')||f==='+'?'':'\nSus datos ya guardados se conservan y vuelven a aparecer si agrega una actividad con el mismo nombre.'))) return;
+    const filas=hj.filas.slice(), mapa=filas.map((_,i)=>i); filas.splice(r,1); mapa.splice(r,1); tbCambiarFilas(h,filas,mapa); listo(); });
+  box.querySelectorAll('[data-addact]').forEach(b=>b.onclick=()=>{ tbAgregarFila(+b.dataset.addact,'act'); tbPintarAct(); });
+  box.querySelectorAll('[data-addsec]').forEach(b=>b.onclick=()=>{ tbAgregarFila(+b.dataset.addsec,'sec'); tbPintarAct(); });
+  box.querySelectorAll('[data-addlib]').forEach(b=>b.onclick=()=>{ tbAgregarFila(+b.dataset.addlib,'libre'); tbPintarAct(); });
+  [['tbCMin','ministerio'],['tbCEst','establecimiento'],['tbCSer','servicio']].forEach(([id,k])=>box.querySelector('#'+id).onchange=e=>{ T.cfg[k]=e.target.value; listo(); });
+  box.querySelector('#tbCTit').onchange=e=>{ T.modelo.titulo=e.target.value; listo(); };
 }
 /* ---- importar respaldo del programa “Tabulador Diario de Enfermería” (.zip) o archivos de mes (.json) ---- */
 async function tbLeerZip(buf){ const u=new Uint8Array(buf), dv=new DataView(buf), out={};
