@@ -5133,6 +5133,7 @@ function archivoDoc(formato){
 document.getElementById('infGrid').addEventListener('click',e=>{ const b=e.target.closest('button[data-inf]'); if(!b) return; const tipo=b.dataset.inf, f=b.dataset.f;
   prepararDoc(tipo);
   if(f==='pdf'){ irA('vistaDocs'); prepararDoc(tipo); pintarDoc(); setTimeout(()=>document.getElementById('btnImprimir').click(),150); return; }
+  if(f==='excel' && tipo==='matriz'){ excelMatriz(document.getElementById('infMes').value); return; }
   const v=vistaActual(); archivoDoc(f); if(v!=='vistaInf') irA('vistaInf'); });
 document.getElementById('infBus').addEventListener('input',pintarInformes);
 
@@ -6071,6 +6072,80 @@ function montarPerfilPC(){
   document.addEventListener('mousedown',e=>{ const x=document.getElementById('pfPC'); if(x&&!x.contains(e.target)&&!e.target.closest('#pfChipPC')) x.remove(); });
 }
 
+/* ---------- MATRIZ EN EXCEL REAL (.xlsx) con el diseño del sistema y fórmulas ---------- */
+async function excelMatriz(mid){
+  try{ await cargarScript('xlsx/exceljs.min.js'); }catch(e){ alert('Falta el componente para Excel (carpeta "xlsx"). En línea recargue la página; en la PC instale el programa con el kit nuevo.'); return; }
+  const m=mes(mid), c=calcular(mid), cfg=S.cfg||{}, nd=31, D1=7, TOT=D1+nd, SAL=TOT+1, ULT=SAL;
+  const AZ='FF41608F', AZB='FF2C4670', CEL='FFD9E1F2';
+  const col=n=>{ let s=''; while(n>0){ const r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=Math.floor((n-1)/26); } return s; };
+  const wb=new ExcelJS.Workbook(); wb.creator='Sistema de Bodega de Emergencias'; wb.created=new Date();
+  const ws=wb.addWorksheet((m.nombre||mid).slice(0,28), {views:[{state:'frozen', xSplit:2, ySplit:6, showGridLines:false}],
+    pageSetup:{paperSize:5, orientation:'landscape', fitToPage:true, fitToWidth:1, fitToHeight:0, horizontalCentered:true, printTitlesRow:'6:6',
+      margins:{left:0.3,right:0.3,top:0.35,bottom:0.45,header:0.2,footer:0.2}}, headerFooter:{oddFooter:'&C&8Página &P de &N'}});
+  const fino={style:'thin',color:{argb:'FF7F8FA9'}}, caja={top:fino,left:fino,bottom:fino,right:fino};
+  const fnt=(sz,b,colr)=>({name:'Arial', size:sz||8, bold:!!b, color:{argb:colr||'FF000000'}});
+  const ctr={horizontal:'center',vertical:'middle',wrapText:true}, izq={horizontal:'left',vertical:'middle',wrapText:true};
+  const anch={1:9.5,2:44,3:8.5,4:8.5,5:8.5,6:11}; for(let k=1;k<=ULT;k++) ws.getColumn(k).width=anch[k]||(k>=D1&&k<TOT?4.2:8);
+  const put=(r,cc,v,f,al,fill)=>{ const x=ws.getCell(r,cc); x.value=v; x.font=f||fnt(); x.alignment=al||ctr; if(fill) x.fill={type:'pattern',pattern:'solid',fgColor:{argb:fill}}; return x; };
+  const bord=(r1,c1,r2,c2,b)=>{ for(let r=r1;r<=r2;r++) for(let cc=c1;cc<=c2;cc++) ws.getCell(r,cc).border=b||caja; };
+  // encabezado M03
+  [18,18,20,18].forEach((h,i)=>ws.getRow(i+1).height=h);
+  ws.mergeCells(1,1,3,2);
+  if(typeof LOGO!=='undefined' && LOGO){ const id=wb.addImage({base64:LOGO, extension:'png'}); ws.addImage(id,{tl:{col:0.15,row:0.15}, ext:{width:150,height:60}}); }
+  const CI=SAL-5;
+  [[cfg.l1,9],[cfg.l2,9],[cfg.tit||'MATRIZ DE ENTRADAS Y SALIDAS DE INSUMOS',12]].forEach(([t,sz],i)=>{ ws.mergeCells(i+1,3,i+1,CI-1); put(i+1,3,t||'',fnt(sz,true)); });
+  [[cfg.cod,true],[cfg.ver,false],[cfg.vig,false]].forEach(([t,b],i)=>{ ws.mergeCells(i+1,CI,i+1,ULT); put(i+1,CI,t||'',fnt(9,b)); });
+  bord(1,1,3,ULT);
+  [[1,2,'UNIDAD:  '+(cfg.uni||'EMERGENCIA'),izq],[3,18,'MES:  '+m.nombre,ctr],[19,30,'BODEGA:  EMERGENCIAS',ctr],[31,ULT,'RESPONSABLE: '+(cfg.resp||''),izq]]
+    .forEach(([a,b,t,al])=>{ ws.mergeCells(4,a,4,b); put(4,a,t,fnt(9,true),al); });
+  bord(4,1,4,ULT);
+  // títulos de columnas
+  const H=6; ws.getRow(H).height=34;
+  ['CÓDIGO','INSUMOS','EXISTENCIA INICIAL','CANTIDAD RECIBIDA','FECHA DE INGRESO','FECHA DE VENCIMIENTO',...Array.from({length:nd},(_,i)=>i+1),'TOTAL CONSUMO','SALDO FINAL']
+    .forEach((t,i)=>{ const x=put(H,i+1,t,fnt(7.5,true,'FFFFFFFF'),ctr,AZ); x.border={top:{style:'medium',color:{argb:AZB}},bottom:{style:'medium',color:{argb:AZB}},left:{style:'thin',color:{argb:AZB}},right:{style:'thin',color:{argb:AZB}}}; });
+  // insumos
+  let r=H+1; const prim=r, NUM='#,##0;[Red]-#,##0;""';
+  m.items.forEach(it=>{
+    if(it.t!=='i'){ ws.getRow(r).height=14; ws.mergeCells(r,1,r,ULT); put(r,1,it.n,fnt(8,true,'FF173A6E'),izq,CEL); bord(r,1,r,ULT); r++; return; }
+    const x=c[it.id], n=String(it.n||''); ws.getRow(r).height=n.length<=60?12:(n.length<=120?22:32);
+    put(r,1,it.c?(/^\d+$/.test(it.c)?Number(it.c):it.c):null,fnt(7.5)); put(r,2,n,fnt(7),izq);
+    put(r,3,x.iniManual?x.ini:(x.iniAuto?x.ini:null),fnt(7.5, false, x.iniAuto?'FF555555':'FF000000'));
+    put(r,4,x.rec||null,fnt(7.5,!!x.rec,x.rec?'FF0E6B45':'FF000000'));
+    put(r,5,x.fechas.length?x.fechas.map(f=>f.slice(8,10)+'/'+f.slice(5,7)).join(', '):null,fnt(6.5));
+    put(r,6,x.vto?(x.vto.slice(5,7)+'/'+x.vto.slice(0,4)):null,fnt(6.5));
+    const d=it.d||[]; for(let k=0;k<nd;k++){ const v=d[k]; put(r,D1+k,(v===null||v===undefined||v==='')?null:Number(v),fnt(7)); }
+    put(r,TOT,{formula:`SUM(${col(D1)}${r}:${col(D1+nd-1)}${r})`, result:x.cons},fnt(7.5,true));
+    put(r,SAL,{formula:`N(C${r})+N(D${r})-${col(TOT)}${r}`, result:(x.ini||0)+x.rec-x.cons},fnt(7.5,true),ctr,'FFF3F6FB');
+    [3,4,...Array.from({length:nd+2},(_,i)=>D1+i)].forEach(cc=>ws.getCell(r,cc).numFmt=NUM);
+    bord(r,1,r,ULT); r++; });
+  const ult=r-1;
+  // totales
+  ws.getRow(r).height=16; ws.mergeCells(r,1,r,2); put(r,1,'TOTALES',fnt(8.5,true,'FFFFFFFF'),ctr,AZ);
+  [3,4,...Array.from({length:nd+2},(_,i)=>D1+i)].forEach(cc=>{ const x=put(r,cc,{formula:`SUM(${col(cc)}${prim}:${col(cc)}${ult})`},fnt(cc>=D1?7.5:8,true,'FFFFFFFF'),ctr,AZ); x.numFmt=NUM; });
+  [5,6].forEach(cc=>put(r,cc,null,fnt(),ctr,AZ));
+  bord(r,1,r,ULT,{top:{style:'medium',color:{argb:AZB}},bottom:{style:'medium',color:{argb:AZB}},left:{style:'thin',color:{argb:AZB}},right:{style:'thin',color:{argb:AZB}}});
+  ws.addConditionalFormatting({ref:`${col(SAL)}${prim}:${col(SAL)}${ult}`, rules:[{type:'cellIs',operator:'lessThan',formulae:['0'],priority:1,
+    style:{font:{name:'Arial',bold:true,color:{argb:'FFC00000'}},fill:{type:'pattern',pattern:'solid',bgColor:{argb:'FFFDE7E9'}}}}]});
+  // firmas y nota
+  r+=3; [[2,2,cfg.f1||'Elaborado por'],[7,18,cfg.f2||'Revisado por'],[24,ULT-2,cfg.f3||'Vo. Bo. Jefatura']].forEach(([a,b,t])=>{ ws.mergeCells(r,a,r,b); put(r,a,t,fnt(8.5,true)); for(let cc=a;cc<=b;cc++) ws.getCell(r,cc).border={top:{style:'thin',color:{argb:'FF000000'}}}; });
+  r+=2; ws.mergeCells(r,1,r,ULT); put(r,1,'Saldo final = existencia inicial + cantidad recibida − total consumo (fórmulas). La cantidad recibida sale de los vales registrados en el sistema. Un saldo negativo indica que falta la existencia inicial o un vale. Generado el '+new Date().toLocaleString('es-SV')+'.',fnt(7,false,'FF555555'),izq);
+  // hoja de vales del mes
+  const vs=S.vales.filter(v=>v.mes===mid).sort((a,b)=>(a.fecha||'')<(b.fecha||'')?-1:1);
+  if(vs.length){ const w2=wb.addWorksheet('Vales recibidos',{views:[{state:'frozen',ySplit:3,showGridLines:false}],pageSetup:{paperSize:1,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0}});
+    [12,11,11,60,14,12,10].forEach((w,i)=>w2.getColumn(i+1).width=w);
+    w2.mergeCells('A1:G1'); w2.getCell('A1').value='VALES RECIBIDOS EN '+m.nombre; w2.getCell('A1').font=fnt(11,true,'FF173A6E');
+    ['Vale','Fecha','Código','Insumo','Lote / obs.','Vencimiento','Cantidad'].forEach((t,i)=>{ const x=w2.getCell(3,i+1); x.value=t; x.font=fnt(9,true,'FFFFFFFF'); x.fill={type:'pattern',pattern:'solid',fgColor:{argb:AZ}}; x.alignment=ctr; x.border=caja; });
+    let rr=4; vs.forEach(v=>v.lineas.forEach(l=>{ const it=m.items.find(i=>i.id===l.item)||{n:'(insumo)'}; const fe=v.fecha?v.fecha.split('-').reverse().join('/'):'';
+      [String(v.num||'').replace('Vale Almacén ',''),fe,it.c?(/^\d+$/.test(it.c)?Number(it.c):it.c):'',it.n,String(l.obs||'').replace(/^Lote /,'')||'—',l.vto?l.vto.slice(5,7)+'/'+l.vto.slice(0,4):'—',Number(l.cant)||0]
+        .forEach((val,i)=>{ const x=w2.getCell(rr,i+1); x.value=val; x.font=fnt(8.5); x.border=caja; x.alignment=i===3?izq:ctr; }); rr++; }));
+    w2.getCell(rr,4).value='TOTAL RECIBIDO'; w2.getCell(rr,4).font=fnt(9,true);
+    const t=w2.getCell(rr,7); t.value={formula:`SUM(G4:G${rr-1})`}; t.font=fnt(9,true); t.alignment=ctr; t.numFmt='#,##0'; }
+  const buf=await wb.xlsx.writeBuffer();
+  const nombre=`Matriz ${m.nombre}`.replace(/[\\/:*?"<>|]/g,'-');
+  descargar(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), nombre+'.xlsx');
+  toast(`✅ Se descargó <b>${esc(nombre)}.xlsx</b> con fórmulas (carpeta Descargas)`,'ok');
+}
+
 /* ---------- EDITOR DE MATRIZ ---------- */
 let ED={sel:new Set(), foco:null, undo:[], zoom:1};
 try{ ED.zoom=Number(localStorage.getItem('bodegaEdZoom'))||1; }catch(e){}
@@ -6866,6 +6941,7 @@ async function guardarCarpeta(elegir){
 document.getElementById('btnCarpeta').addEventListener('click', ()=>guardarCarpeta(false));
 document.getElementById('btnCambiarCarpeta').addEventListener('click', ()=>guardarCarpeta(true));
 document.getElementById('btnExcel').addEventListener('click', ()=>{
+  if(document.getElementById('dTipo').value==='matriz'){ excelMatriz(document.getElementById('dMes').value); return; }
   pintarDoc();
   const d=document.getElementById('doc').cloneNode(true); d.style.zoom=1; d.style.width='';
   d.querySelectorAll('[contenteditable]').forEach(x=>x.removeAttribute('contenteditable'));
