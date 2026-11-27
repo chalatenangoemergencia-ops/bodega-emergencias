@@ -3114,7 +3114,7 @@ nav .fuera-area{display:none!important}
 <section class="vista hidden" id="vistaEd">
   <div class="panel ed-barra">
     <div class="ed-top">
-      <select id="edMes" class="selMes" title="Mes"></select>
+      <select id="edMes" title="Mes y año: los que dicen (crear) todavía no existen"></select>
       <input id="edBus" placeholder="🔎 Buscar insumo o código" title="Buscar insumo o código">
       <select id="edFil" title="Mostrar"><option value="">Todos los insumos</option><option value="mov">Con movimiento</option><option value="sin">Sin código</option><option value="neg">Saldo negativo</option></select>
       <div class="ed-zoom" title="Tamaño de la matriz"><button class="btn sm" data-z="-1">A−</button><span id="edZoomTxt">100%</span><button class="btn sm" data-z="1">A+</button></div>
@@ -5867,7 +5867,8 @@ const edMid=()=>document.getElementById('edMes').value;
 function edSnap(){ const m=mes(edMid()); ED.undo.push({mid:m.id, items:JSON.stringify(m.items)}); if(ED.undo.length>40) ED.undo.shift(); }
 function edDeshacer(){ const u=ED.undo.pop(); if(!u){ toast('No hay nada que deshacer'); return; } mes(u.mid).items=JSON.parse(u.items); guardar(); pintarEd(); toast('↶ Cambio deshecho'); }
 function pintarEd(){
-  const sel=document.getElementById('edMes'); if(!sel.dataset.ini){ sel.dataset.ini='1'; const h=new Date(), hid=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0'); if(mes(hid)) sel.value=hid; }
+  const sel=document.getElementById('edMes'); edLlenarMeses(); if(!sel.dataset.ini){ sel.dataset.ini='1'; const h=new Date(), hid=h.getFullYear()+'-'+String(h.getMonth()+1).padStart(2,'0'); sel.value=mes(hid)?hid:S.meses[S.meses.length-1].id; }
+  if(!mes(sel.value)) sel.value=S.meses[S.meses.length-1].id;
   const mid=edMid(), m=mes(mid), c=calcular(mid), q=nrK(document.getElementById('edBus').value), fil=document.getElementById('edFil').value, dm=diasDelMes(mid);
   document.getElementById('edWrap').style.setProperty('--ez',ED.zoom); document.getElementById('edZoomTxt').textContent=Math.round(ED.zoom*100)+'%';
   let h='<thead><tr><th class="fx chk"><input type="checkbox" id="edTodos" title="Marcar todos"></th><th class="fx cod">CÓDIGO</th><th class="fx nom">INSUMO</th><th class="fx fini" data-col="ini">EXIST.<br>INICIAL</th><th class="fx frec">RECIB.</th>';
@@ -5989,15 +5990,29 @@ const ED_ACC={
 };
 document.querySelector('#vistaEd .ed-tools').addEventListener('click',e=>{ const b=e.target.closest('button[data-ed]'); if(b) ED_ACC[b.dataset.ed](); });
 document.querySelectorAll('#vistaEd .ed-zoom button').forEach(b=>b.addEventListener('click',()=>{ ED.zoom=Math.min(1.6,Math.max(.7,Math.round((ED.zoom+0.1*Number(b.dataset.z))*10)/10)); try{ localStorage.setItem('bodegaEdZoom',ED.zoom); }catch(e){} pintarEd(); }));
-['edMes','edFil'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{ ED.sel.clear(); pintarEd(); }));
+document.getElementById('edFil').addEventListener('change',()=>{ ED.sel.clear(); pintarEd(); });
+document.getElementById('edMes').addEventListener('change',e=>{ const id=e.target.value; ED.sel.clear();
+  if(!mes(id)){ const [y,m]=id.split('-').map(Number), base=mesBase(id);
+    if(!confirm('Crear '+MESES_ES[m-1]+' '+y+' en la matriz?\n\nSe copian los insumos (con sus códigos y orden) de '+base.nombre+'. La existencia inicial se toma sola del saldo del mes anterior y todo se va actualizando en cadena.')){ e.target.value=ED.ultMes||S.meses[S.meses.length-1].id; return; }
+    crearMesMatriz(id); guardar(); toast('📆 '+MESES_ES[m-1]+' '+y+' creado','ok'); }
+  ED.ultMes=id; pintarEd(); });
+/* todos los meses y años en Editar matriz: los que no existen se pueden crear */
+const MESES_ES=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+function mesBase(id){ const ant=S.meses.filter(m=>m.id<id); return ant.length?ant[ant.length-1]:S.meses[0]; }
+function crearMesMatriz(id){ if(mes(id)) return mes(id); const [y,m]=id.split('-').map(Number), base=mesBase(id);
+  const items=base.items.map((it,k)=>{ const o={id:id+'-'+(k+1), t:it.t, n:it.n}; if(it.c) o.c=it.c; return o; });
+  const nuevo={id, nombre:MESES_ES[m-1]+' '+y, items}; S.meses.push(nuevo); S.meses.sort((a,b)=>a.id<b.id?-1:1); llenarMeses(); return nuevo; }
+function edLlenarMeses(){ const sel=document.getElementById('edMes'), v=sel.value, ys=S.meses.map(m=>+m.id.slice(0,4)), hoy=new Date().getFullYear();
+  const y0=Math.min(...ys,hoy)-1, y1=Math.max(...ys,hoy)+1; let h='';
+  for(let y=y1;y>=y0;y--){ h+=`<optgroup label="${y}">`; for(let m=1;m<=12;m++){ const id=y+'-'+String(m).padStart(2,'0'), ex=!!mes(id); h+=`<option value="${id}"${ex?'':' style="color:#8a94a6"'}>${MESES_ES[m-1]} ${y}${ex?'':'  ＋ (crear)'}</option>`; } h+='</optgroup>'; }
+  sel.innerHTML=h; if(v) sel.value=v; }
 document.getElementById('edBus').addEventListener('input',()=>pintarEd());
 /* --- cierre de mes: pasar existencias como inicio del mes siguiente --- */
 function asegurarMesSiguiente(mid){
-  const i=S.meses.findIndex(x=>x.id===mid); if(S.meses[i+1]) return S.meses[i+1];
-  const [y,mm]=mid.split('-').map(Number), ny=mm===12?y+1:y, nm=mm===12?1:mm+1, id=ny+'-'+String(nm).padStart(2,'0');
+  const [y,mm]=mid.split('-').map(Number), ny=mm===12?y+1:y, nm=mm===12?1:mm+1, id=ny+'-'+String(nm).padStart(2,'0'); if(mes(id)) return mes(id);
   const nombres=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
   const items=mes(mid).items.map((it,k)=>{ const o={id:id+'-'+(k+1), t:it.t, n:it.n}; if(it.c) o.c=it.c; return o; });
-  const nuevo={id, nombre:nombres[nm-1]+' '+ny, items}; S.meses.push(nuevo); llenarMeses(); return nuevo;
+  const nuevo={id, nombre:nombres[nm-1]+' '+ny, items}; S.meses.push(nuevo); S.meses.sort((a,b)=>a.id<b.id?-1:1); llenarMeses(); return nuevo;
 }
 function abrirCierre(){
   const mid=edMid(), m=mes(mid), i=S.meses.findIndex(x=>x.id===mid), sig=S.meses[i+1], c=calcular(mid);
