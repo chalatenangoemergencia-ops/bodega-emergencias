@@ -320,6 +320,9 @@ table.pl-t td.falta{background:#ffe1e1}
 .pl-pop .cods button small{display:block;font-weight:400;font-size:9.5px;opacity:.8}
 .pl-pop .fila{gap:6px;align-items:center;margin-top:6px}
 .pl-pop select,.pl-pop input{padding:5px 7px;font-size:13px}
+.pl-horasmes{margin-top:8px;background:#eef4ff;border:1px solid #d3e1fa;border-radius:10px;padding:8px 10px;font-size:13px;color:#173a6e}.pl-horasmes small{color:#4a5b78;font-size:11.5px}
+.pl-jor{display:flex;flex-direction:column;gap:2px;border:2px solid #e3e9f2;border-radius:12px;padding:8px 12px;cursor:pointer;background:#fff;min-width:250px;flex:1}
+.pl-jor.on{border-color:#2f5ea8;background:#f1f6ff}.pl-jor small{color:#5d6b82;font-size:11.5px}.pl-jor input{margin-right:4px}
 .pl-leyenda{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:0 0 10px;font-size:12.5px}
 .pl-ley{display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #e3e9f2;border-radius:999px;padding:3px 10px}
 .pl-ley i,.pl-ley-i{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid rgba(0,0,0,.15)}
@@ -5186,6 +5189,8 @@ const PL_COD_DEF=[
   {c:'8/6', ini:'08:00', fin:'18:00', h:10, M:1,T:1,N:0, tipo:'t'},
   {c:'6/3', ini:'06:00', fin:'15:00', h:9,  M:1,T:0,N:0, tipo:'t'},
   {c:'11/6',ini:'11:00', fin:'18:00', h:7,  M:1,T:1,N:0, tipo:'t'},
+  {c:'2/10',ini:'14:00', fin:'22:00', h:8,  M:0,T:1,N:0, tipo:'t', nom:'Tarde de 8 horas'},
+  {c:'N8',  ini:'22:00', fin:'06:00', h:8,  M:0,T:0,N:1, tipo:'t', nom:'Noche de 8 horas'},
   {c:'L',   ini:'', fin:'', h:0, M:0,T:0,N:0, tipo:'d', nom:'Libre / descanso'},
   {c:'A',   ini:'', fin:'', h:0, M:0,T:0,N:0, tipo:'a', nom:'Asueto'},
   {c:'V',   ini:'', fin:'', h:0, M:0,T:0,N:0, tipo:'a', nom:'Vacación'},
@@ -5203,7 +5208,8 @@ function plBase(){
       cob:{lic:{dia:2,M:1,T:1,N:1}, tec:{dia:6,M:4,T:2,N:2}},
       reglas:{maxSeg:5, libresNoche:1, nochesExactas:true, libresSemana:0, tolExtra:12, genN:'N', genT:'6/6', genM:'6/2'},
       imp:{papel:'carta', ofW:13, ofH:8.5, ajustar:true}}; }
-  const b=S.plan.base; b.ausencias=b.ausencias||[]; if(!b.codigos.some(k=>k.c==='O')) b.codigos.push({c:'O',ini:'',fin:'',h:0,M:0,T:0,N:0,tipo:'a',nom:'Otra ausencia (ver observación)'});
+  const b=S.plan.base; b.ausencias=b.ausencias||[];
+  [{c:'2/10',ini:'14:00',fin:'22:00',h:8,M:0,T:1,N:0,tipo:'t',nom:'Tarde de 8 horas'},{c:'N8',ini:'22:00',fin:'06:00',h:8,M:0,T:0,N:1,tipo:'t',nom:'Noche de 8 horas'}].forEach(k=>{ if(!b.codigos.some(x=>x.c===k.c)){ const i=b.codigos.findIndex(x=>x.tipo!=='t'); b.codigos.splice(i<0?b.codigos.length:i,0,k); } }); if(!b.codigos.some(k=>k.c==='O')) b.codigos.push({c:'O',ini:'',fin:'',h:0,M:0,T:0,N:0,tipo:'a',nom:'Otra ausencia (ver observación)'});
   b.codigos.forEach(k=>{ if(k.c==='P'&&k.nom==='Permiso') k.nom='Permiso personal'; });
   b.imp=b.imp||{papel:'carta',ofW:13,ofH:8.5,ajustar:true}; b.reglas=b.reglas||{}; Object.entries({maxSeg:5,postNoche:true,tolExtra:12,genN:'N',genT:'6/6',genM:'6/2'}).forEach(([k,v])=>{ if(b.reglas[k]===undefined) b.reglas[k]=v; });
   if(b.reglas.libresNoche===undefined) b.reglas.libresNoche=b.reglas.postNoche===false?0:1; if(b.reglas.nochesExactas===undefined) b.reglas.nochesExactas=true; if(b.reglas.libresSemana===undefined) b.reglas.libresSemana=0;
@@ -5222,8 +5228,14 @@ const plActivos=()=>plBase().personal.filter(p=>p.activo!==false);
 const plCatCob=p=>p.cat==='jefa'?'lic':p.cat;
 const plFij=(M,pid,d)=>!!(M.fij[pid]&&M.fij[pid][d]);
 function plMetaAuto(mid,M){ let n=0; const dm=plDm(mid); for(let d=1;d<=dm;d++){ const w=plDow(mid,d); if(w!==0&&w!==6&&!M.asuetos.includes(d)) n++; } return n*8; }
-function plDiasAus(mid,M,p){ let n=0; const dm=plDm(mid), c=M.cel[p.id]||{}; for(let d=1;d<=dm;d++){ const k=plCod(c[d]), w=plDow(mid,d); if(k&&k.tipo==='a'&&k.c!=='A'&&w!==0&&w!==6&&!M.asuetos.includes(d)) n++; } return n; }
-function plMeta(mid,M,p){ const v=M.meta[p.id]; return (v!==undefined&&v!==''&&v!==null)?Number(v):Math.max(0,plMetaAuto(mid,M)-8*plDiasAus(mid,M,p)); }
+/* horas que se descuentan de la meta por ausencias: cada ausencia registrada dice cuántas horas por día y si cuentan los días hábiles o todos */
+function plDescAus(mid,M,p){ let h=0, dias=0; const dm=plDm(mid), c=M.cel[p.id]||{}, au=(M.aus&&M.aus[p.id])||{}, B=plBase();
+  for(let d=1;d<=dm;d++){ const k=plCod(c[d]); if(!k||k.tipo!=='a'||k.c==='A') continue; const w=plDow(mid,d), habil=w!==0&&w!==6&&!M.asuetos.includes(d);
+    const a=au[d]&&B.ausencias.find(x=>x.id===au[d]); const hd=a&&a.h!==undefined?Number(a.h):8, todos=a&&a.cuenta==='todos';
+    if(todos||habil){ h+=hd; dias++; } }
+  return {h,dias}; }
+function plDiasAus(mid,M,p){ return plDescAus(mid,M,p).dias; }
+function plMeta(mid,M,p){ const v=M.meta[p.id]; return (v!==undefined&&v!==''&&v!==null)?Number(v):Math.max(0,plMetaAuto(mid,M)-plDescAus(mid,M,p).h); }
 /* ---- ausencias registradas por rango de fechas (vacaciones, permisos, incapacidades…) ---- */
 const plFecha=(mid,d)=>mid+'-'+String(d).padStart(2,'0');
 function plAusDias(a,mid){ const out=[], dm=plDm(mid); for(let d=1;d<=dm;d++){ const f=plFecha(mid,d); if(f>=a.desde&&f<=a.hasta) out.push(d); } return out; }
@@ -5383,15 +5395,15 @@ function plLeyenda(){ const z=document.getElementById('plLeyenda'); if(!z) retur
   P.forEach(p=>{ const c=M.cel[p.id]||{}; for(let d=1;d<=dm;d++){ const k=plCod(c[d]); if(k&&k.tipo==='a') cnt[k.c]=(cnt[k.c]||0)+1; } });
   const rev=P.filter(p=>M.rev&&M.rev[p.id]).length;
   z.innerHTML=`<span class="muted">En pantalla (no se imprime):</span>${B.codigos.filter(k=>k.tipo==='a').map(k=>`<span class="pl-ley"><i style="background:${plColor(k.c)}"></i><b>${plE(k.c)}</b> ${plE(k.nom||'')}${cnt[k.c]?` · <b>${cnt[k.c]}</b> día(s)`:''}</span>`).join('')}
-    <span class="pl-ley"><i style="background:#fff;box-shadow:inset 4px 0 0 #2fbf71"></i>Revisados: <b>${rev} de ${P.length}</b></span><button class="btn sm" id="plLeyAus">🏖️ Registrar ausencias / vacaciones</button>`;
+    <span class="pl-ley" title="Días hábiles sin asueto × 8 h"><b>🕒 Horas del mes: ${plMetaAuto(PL_MID,M)} h</b> · turnos de ${B.reglas.genN==='N8'?'8':'12'} h</span><span class="pl-ley"><i style="background:#fff;box-shadow:inset 4px 0 0 #2fbf71"></i>Revisados: <b>${rev} de ${P.length}</b></span><button class="btn sm" id="plLeyAus">🏖️ Registrar ausencias / vacaciones</button>`;
   z.querySelector('#plLeyAus').onclick=()=>plAbrirAus(); }
 function plAbrirAus(pre){ PL_AUS_PRE=pre||null; PL_TAB='aus'; const c=document.getElementById('plConf'); c.classList.remove('hidden'); plPintarConf(); c.scrollIntoView({behavior:'smooth',block:'start'}); }
 function plResumen(){ const M=plMes(PL_MID), dm=plDm(PL_MID);
   const filas=plOrden().map(p=>{ const meta=plMeta(PL_MID,M,p), h=plHoras(M,p,dm), ex=plExtras(M,p,dm), dif=h-meta;
     return `<tr><td>${p.num||'—'}</td><td>${plE(p.nombre)}</td><td>${plE(PL_CAT[p.cat])}</td><td class="num">${meta}</td><td class="num">${h-ex}</td><td class="num">${ex||''}</td><td class="num"><b>${h}</b></td>
       <td class="num ${dif<0?'neg':''}">${dif<0?-dif:''}</td><td class="num ${dif>0?'pos':''}">${dif>0?dif:''}</td><td class="num ${plNoches(M,p,dm)!==plNochesMeta(M,p)&&Object.keys(M.cel).length?'neg':''}">${plNoches(M,p,dm)}/${plNochesMeta(M,p)}</td>
-      <td class="num">${plDiasAus(PL_MID,M,p)||''}</td><td style="text-align:center"><input type="checkbox" class="plRev" data-p="${p.id}" ${M.rev&&M.rev[p.id]?'checked':''}></td></tr>`; }).join('');
-  document.getElementById('plResumen').innerHTML=`<table class="lista pl-res"><thead><tr><th>N° matriz</th><th>Nombre</th><th>Categoría</th><th class="num">Meta (h)</th><th class="num">Turnos (h)</th><th class="num">Extra anotada</th><th class="num">H/T</th><th class="num">Pendientes</th><th class="num">Exceso / extra</th><th class="num">Noches</th><th class="num" title="Días hábiles de vacación, permiso, incapacidad u otra ausencia (se descuentan de la meta automática)">Ausencias</th><th>✔ Revisado</th></tr></thead><tbody>${filas}</tbody></table>`;
+      <td class="num">${(d0=>d0.dias?d0.dias+' d · −'+d0.h+' h':'')(plDescAus(PL_MID,M,p))}</td><td style="text-align:center"><input type="checkbox" class="plRev" data-p="${p.id}" ${M.rev&&M.rev[p.id]?'checked':''}></td></tr>`; }).join('');
+  document.getElementById('plResumen').innerHTML=`<table class="lista pl-res"><thead><tr><th>N° matriz</th><th>Nombre</th><th>Categoría</th><th class="num">Meta (h)</th><th class="num">Turnos (h)</th><th class="num">Extra anotada</th><th class="num">H/T</th><th class="num">Pendientes</th><th class="num">Exceso / extra</th><th class="num">Noches</th><th class="num" title="Días de vacación, permiso, incapacidad u otra ausencia y horas que se descuentan de la meta automática">Ausencias (descuento)</th><th>✔ Revisado</th></tr></thead><tbody>${filas}</tbody></table>`;
   document.querySelectorAll('#plResumen .plRev').forEach(i=>i.onchange=()=>{ const M2=plMes(PL_MID); M2.rev=M2.rev||{}; if(i.checked) M2.rev[i.dataset.p]=true; else delete M2.rev[i.dataset.p]; guardar();
     const td=document.querySelector(`#plDoc td.nm[data-fila="${i.dataset.p}"]`); if(td) td.classList.toggle('rev',i.checked); plLeyenda(); }); }
 
@@ -5434,13 +5446,21 @@ function plPintarConf(){
       <div class="campo"><label>Tarde</label><input type="number" min="0" data-cob="${cat}.T" value="${q.T}"></div>
       <div class="campo"><label>Noche</label><input type="number" min="0" data-cob="${cat}.N" value="${q.N}"></div></div></div>`; };
     const jefa=B.personal.find(p=>p.cat==='jefa');
-    z.innerHTML=`<div class="pl-grid4">${caja('lic','👩‍⚕️ Licenciados/as en enfermería')}${caja('tec','🧑‍⚕️ Técnicos/as y auxiliares')}
+    const jor=B.reglas.genN==='N8'?'8':(B.reglas.genN==='N'&&B.reglas.genT==='6/6'?'12':'otra');
+    z.innerHTML=`<div class="pl-caja" style="margin-bottom:12px"><h3>⏱️ Jornada de los turnos</h3><div class="fila" style="align-items:center">
+        <label class="pl-jor${jor==='12'?' on':''}"><input type="radio" name="plJor" value="12" ${jor==='12'?'checked':''}> <b>12 horas</b><small>6/6 (06:00–18:00, mañana y tarde) · N (18:00–06:00)</small></label>
+        <label class="pl-jor${jor==='8'?' on':''}"><input type="radio" name="plJor" value="8" ${jor==='8'?'checked':''}> <b>8 horas</b><small>6/2 mañana (06:00–14:00) · 2/10 tarde (14:00–22:00) · N8 noche (22:00–06:00)</small></label>
+        ${jor==='otra'?'<span class="muted">Combinación personalizada (ver 📏 Reglas)</span>':''}</div>
+        <p class="muted" style="margin:6px 0 0">Cambia solo los turnos que usa el generador; <b>la meta de horas del mes no cambia</b> (con 8 horas se trabajan más días, con 12 horas menos días). Después pulse <b>⚡ Generar mes</b>. Lo fijado 📌 se respeta.</p></div>
+      <div class="pl-grid4">${caja('lic','👩‍⚕️ Licenciados/as en enfermería')}${caja('tec','🧑‍⚕️ Técnicos/as y auxiliares')}
       <div class="pl-caja"><h3>📆 Mes de ${PL_MES[+PL_MID.slice(5)-1].toLowerCase()} ${PL_MID.slice(0,4)}</h3>
         <div class="campo" style="max-width:none"><label>Días de asueto (números separados por coma)</label><input id="plAsu" value="${M.asuetos.join(', ')}"></div>
-        <div class="muted" style="margin-top:6px">Meta automática del mes: <b>${plMetaAuto(PL_MID,M)} h</b> (días de lunes a viernes sin asueto × 8 h). Cada persona puede tener su propia meta en “Personal y metas”.</div>
+        <div class="pl-horasmes">🕒 Horas que corresponden en ${PL_MES[+PL_MID.slice(5)-1].toLowerCase()}: <b>${plMetaAuto(PL_MID,M)} h</b><br><small>${plMetaAuto(PL_MID,M)/8} días hábiles (lunes a viernes sin asueto) × 8 h. Es la meta de cada persona, use turnos de 8 o de 12 horas; si tiene vacación, permiso o incapacidad se le descuentan 8 h por día hábil. Se puede cambiar por persona en “Personal y metas”.</small></div>
         ${jefa?`<label class="pl-chk" style="margin-top:8px"><input type="checkbox" id="plJefaCuenta" ${jefa.cuenta!==false?'checked':''}> ${plE(jefa.nombre)} (jefa) cuenta para la cobertura del día</label>`:''}</div></div>
-      <p class="muted" style="margin-bottom:0">El turno <b>${plE(B.reglas.genT)}</b> cubre mañana y tarde: la persona cuenta en ambas franjas y una sola vez en el total del día. El total por día puede ser mayor que las franjas: el generador agrega turnos de mañana (<b>${plE(B.reglas.genM)}</b>) hasta completarlo.</p>`;
+      <p class="muted" style="margin-bottom:0">${plFr(B.reglas.genT).M?`El turno <b>${plE(B.reglas.genT)}</b> cubre mañana y tarde: la persona cuenta en ambas franjas y una sola vez en el total del día.`:`Con 8 horas cada franja la cubre una persona distinta (6/2, 2/10 y N8).`} El total por día puede ser mayor que las franjas: el generador agrega turnos de mañana (<b>${plE(B.reglas.genM)}</b>) hasta completarlo.</p>`;
     z.querySelectorAll('[data-cob]').forEach(i=>i.onchange=()=>{ const [c,k]=i.dataset.cob.split('.'); B.cob[c][k]=Math.max(0,Number(i.value)||0); guardar(); plAvisos(); });
+    z.querySelectorAll('input[name=plJor]').forEach(r=>r.onchange=()=>{ const R=B.reglas; if(r.value==='8'){ R.genN='N8'; R.genT='2/10'; R.genM='6/2'; if(+R.libresNoche>1) R.libresNoche=1; } else { R.genN='N'; R.genT='6/6'; R.genM='6/2'; }
+      guardar(); plPintarConf(); toast('⏱️ Jornada de '+r.value+' horas: pulse ⚡ Generar mes para aplicarla','ok'); });
     z.querySelector('#plAsu').onchange=e=>{ M.asuetos=e.target.value.split(/[,\s]+/).map(Number).filter(n=>n>=1&&n<=plDm(PL_MID)); guardar(); pintarPlan(); };
     const jc=z.querySelector('#plJefaCuenta'); if(jc) jc.onchange=()=>{ jefa.cuenta=jc.checked; guardar(); pintarPlan(); };
   }
@@ -5522,23 +5542,33 @@ function plPintarConf(){
         <div class="campo" style="min-width:230px"><label>Persona</label><select id="plAP">${per.map(p=>`<option value="${p.id}"${p.id===pre.pid?' selected':''}>${plE(p.nombre)}</option>`).join('')}</select></div>
         <div class="campo"><label>Tipo</label><select id="plAT">${tipos.map(k=>`<option value="${plE(k.c)}">${plE(k.c+' · '+(k.nom||''))}</option>`).join('')}</select></div>
         <div class="campo"><label>Desde</label><input type="date" id="plAD" value="${ini}"></div><div class="campo"><label>Hasta</label><input type="date" id="plAH" value="${ini}"></div></div>
+        <div class="fila" style="margin-top:6px;align-items:flex-end"><div class="campo"><label>Horas que se descuentan por día</label><select id="plAHd">${[12,10,8,6,4,2].map(n=>`<option value="${n}"${n===8?' selected':''}>${n} horas</option>`).join('')}<option value="otra">Otra…</option></select></div>
+          <div class="campo hidden" id="plAHoC"><label>¿Cuántas horas?</label><input type="number" id="plAHo" min="0" max="24" step="0.5" value="8" style="width:90px"></div>
+          <div class="campo"><label>Días que cuentan</label><select id="plACu"><option value="habiles">Solo de lunes a viernes (sin asuetos)</option><option value="todos">Todos los días del rango</option></select></div>
+          <div class="muted" id="plAPrev" style="padding-bottom:8px"></div></div>
         <div class="fila" style="margin-top:6px"><div class="campo" style="flex:3"><label>Nota (opcional)</label><input id="plAN" placeholder="Ej.: incapacidad del ISSS, permiso con goce de sueldo…"></div>
         <button class="btn ok" id="plAAdd" style="align-self:flex-end">🏖️ Registrar</button></div>
-        <p class="muted" style="margin:6px 0 0">Los días quedan fijados 📌 en el plan con su código y color, la persona no recibe turnos esos días y su meta automática baja 8 h por cada día hábil de ausencia. ¿Falta un tipo? Agréguelo en <b>🕒 Códigos de turno</b> con tipo “Ausencia” y su color.</p></div>
+        <p class="muted" style="margin:6px 0 0">Los días quedan fijados 📌 en el plan con su código y color, la persona no recibe turnos esos días y a su meta del mes se le descuentan las horas elegidas (por ejemplo 12 h si su turno es de 12, 8 h si es de 8, 6 h por medio día). ¿Falta un tipo? Agréguelo en <b>🕒 Códigos de turno</b> con tipo “Ausencia” y su color.</p></div>
       <div class="pl-caja" style="grid-column:span 2"><h3>🏖️ Vacaciones ${anio}</h3><div style="max-height:260px;overflow:auto"><table class="lista"><thead><tr><th>Persona</th><th class="num">Le corresponden (días)</th><th class="num">Usados ${anio}</th><th class="num">Disponibles</th></tr></thead><tbody>
         ${per.map(p=>{ const u=plVacUsadas(p,anio), t=p.vac===undefined||p.vac===null||p.vac===''?null:+p.vac; return `<tr><td>${plE(p.nombre)}</td><td class="num"><input type="number" min="0" max="60" data-vac="${p.id}" value="${t??''}" placeholder="—" style="width:64px"></td><td class="num">${u||''}</td><td class="num ${t!==null&&u>t?'neg':''}">${t===null?'':t-u}</td></tr>`; }).join('')}</tbody></table></div>
         <p class="muted" style="margin:6px 0 0">Escriba los días de vacación que le corresponden a cada persona según aplique; los usados se cuentan solos con lo registrado como <b>V</b>.</p></div></div>
       <h3 style="font-size:14px;color:#173a6e;margin:14px 0 6px">Registradas en ${anio} (${lista.length})</h3>
-      ${lista.length?`<div style="overflow:auto"><table class="lista"><thead><tr><th></th><th>Persona</th><th>Tipo</th><th>Desde</th><th>Hasta</th><th class="num">Días</th><th>Nota</th><th></th></tr></thead><tbody>${lista.map(a=>{ const k=plCod(a.c)||{nom:''};
-        return `<tr><td><i class="pl-ley-i" style="background:${plColor(a.c)}"></i></td><td>${plE(nomP(a.pid))}</td><td><b>${plE(a.c)}</b> ${plE(k.nom||'')}</td><td>${fmtFecha(a.desde)}</td><td>${fmtFecha(a.hasta)}</td><td class="num">${plDiasRango(a)}</td><td>${plE(a.nota||'')}</td><td style="white-space:nowrap"><button class="btn sm" data-ver="${a.id}">Ver</button> <button class="btn del sm" data-quitar="${a.id}">✖</button></td></tr>`; }).join('')}</tbody></table></div>`:'<p class="muted">Todavía no hay ausencias registradas este año.</p>'}`;
-    const d=z.querySelector('#plAD'), hh=z.querySelector('#plAH'); d.onchange=()=>{ if(hh.value<d.value) hh.value=d.value; };
-    z.querySelector('#plAAdd').onclick=()=>{ const a={id:'au'+Date.now().toString(36), pid:z.querySelector('#plAP').value, c:z.querySelector('#plAT').value, desde:d.value, hasta:hh.value, nota:z.querySelector('#plAN').value.trim(), reg:new Date().toISOString()};
+      ${lista.length?`<div style="overflow:auto"><table class="lista"><thead><tr><th></th><th>Persona</th><th>Tipo</th><th>Desde</th><th>Hasta</th><th class="num">Días</th><th class="num">Descuento</th><th>Nota</th><th></th></tr></thead><tbody>${lista.map(a=>{ const k=plCod(a.c)||{nom:''};
+        return `<tr><td><i class="pl-ley-i" style="background:${plColor(a.c)}"></i></td><td>${plE(nomP(a.pid))}</td><td><b>${plE(a.c)}</b> ${plE(k.nom||'')}</td><td>${fmtFecha(a.desde)}</td><td>${fmtFecha(a.hasta)}</td><td class="num">${plDiasRango(a)}</td><td class="num" style="white-space:nowrap"><select data-hd="${a.id}" title="Horas por día">${[12,10,8,6,4,2].concat([a.h??8].filter(v=>![12,10,8,6,4,2].includes(+v))).map(n=>`<option value="${n}"${+(a.h??8)===+n?' selected':''}>${n} h/día</option>`).join('')}</select> <small class="muted">${a.cuenta==='todos'?'todos los días':'L a V'}</small></td><td>${plE(a.nota||'')}</td><td style="white-space:nowrap"><button class="btn sm" data-ver="${a.id}">Ver</button> <button class="btn del sm" data-quitar="${a.id}">✖</button></td></tr>`; }).join('')}</tbody></table></div>`:'<p class="muted">Todavía no hay ausencias registradas este año.</p>'}`;
+    const d=z.querySelector('#plAD'), hh=z.querySelector('#plAH'), sh=z.querySelector('#plAHd'), oh=z.querySelector('#plAHo'), cu=z.querySelector('#plACu');
+    const horasDia=()=>sh.value==='otra'?Math.max(0,Number(oh.value)||0):Number(sh.value);
+    const prev=()=>{ z.querySelector('#plAHoC').classList.toggle('hidden',sh.value!=='otra'); if(!d.value||!hh.value||hh.value<d.value){ z.querySelector('#plAPrev').textContent=''; return; }
+      let n=0; for(let x=new Date(d.value+'T12:00'); x<=new Date(hh.value+'T12:00'); x.setDate(x.getDate()+1)){ const w=x.getDay(); if(cu.value==='todos'||(w!==0&&w!==6)) n++; }
+      z.querySelector('#plAPrev').innerHTML=`Descuento: <b>${n} día(s) × ${horasDia()} h = ${n*horasDia()} h</b>${cu.value==='habiles'?' (sin contar asuetos)':''}`; };
+    d.onchange=()=>{ if(hh.value<d.value) hh.value=d.value; prev(); }; [hh,sh,oh,cu].forEach(x=>x.addEventListener('input',prev)); [hh,sh,cu].forEach(x=>x.addEventListener('change',prev)); prev();
+    z.querySelector('#plAAdd').onclick=()=>{ const a={id:'au'+Date.now().toString(36), pid:z.querySelector('#plAP').value, c:z.querySelector('#plAT').value, desde:d.value, hasta:hh.value, h:horasDia(), cuenta:cu.value, nota:z.querySelector('#plAN').value.trim(), reg:new Date().toISOString()};
       if(!a.desde||!a.hasta||a.hasta<a.desde){ alert('Revise las fechas: “Hasta” no puede ser antes de “Desde”.'); return; }
       const cruce=B.ausencias.find(x=>x.pid===a.pid&&!(x.hasta<a.desde||x.desde>a.hasta)); if(cruce&&!confirm('Esa persona ya tiene una ausencia del '+fmtFecha(cruce.desde)+' al '+fmtFecha(cruce.hasta)+'. ¿Registrar de todos modos? (los días que coinciden quedan con el tipo nuevo)')) return;
       B.ausencias.push(a); Object.keys(S.plan.meses).concat([PL_MID]).forEach(m=>plAplicarAus(m)); guardar(); PL_FILA=a.pid; pintarPlan(); toast('🏖️ Ausencia registrada: '+plDiasRango(a)+' día(s)','ok'); };
     z.querySelectorAll('[data-quitar]').forEach(b=>b.onclick=()=>{ const i=B.ausencias.findIndex(x=>x.id===b.dataset.quitar); if(i<0||!confirm('¿Quitar esta ausencia? Esos días quedan como L (libre); luego puede pulsar ⚡ Generar mes para asignarles turno.')) return;
       B.ausencias.splice(i,1); Object.keys(S.plan.meses).forEach(m=>plAplicarAus(m)); guardar(); pintarPlan(); });
     z.querySelectorAll('[data-ver]').forEach(b=>b.onclick=()=>{ const a=B.ausencias.find(x=>x.id===b.dataset.ver); if(!a) return; document.getElementById('plMesSel').value=String(+a.desde.slice(5,7)); document.getElementById('plAnio').value=a.desde.slice(0,4); PL_FILA=a.pid; pintarPlan(); document.getElementById('plPrev').scrollIntoView({behavior:'smooth'}); });
+    z.querySelectorAll('[data-hd]').forEach(s=>s.onchange=()=>{ const a=B.ausencias.find(x=>x.id===s.dataset.hd); if(!a) return; a.h=Number(s.value); guardar(); pintarPlan(); toast('✅ Descuento actualizado: '+a.h+' h por día','ok'); });
     z.querySelectorAll('[data-vac]').forEach(i=>i.onchange=()=>{ const p=B.personal.find(x=>x.id===i.dataset.vac); p.vac=i.value===''?null:Number(i.value); guardar(); plPintarConf(); });
   }
   if(PL_TAB==='reg'){ const R=B.reglas, cods=B.codigos.filter(k=>k.tipo==='t').map(k=>k.c), sel=(id,v)=>`<select id="${id}">${cods.map(c=>`<option${c===v?' selected':''}>${plE(c)}</option>`).join('')}</select>`;
