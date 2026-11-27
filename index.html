@@ -4560,7 +4560,7 @@ function docMatriz(mid){
     h+=`<td>${fmt(x.cons)}</td><td class="s ${x.sal<0?'r':''}">${fmt(x.sal)}</td></tr>`;
   });
   h+=`<tr class="tot">${EDITABLE?'<td class="acc"></td>':''}<td></td><td class="n">TOTALES</td><td></td><td>${fmt(tr)}</td><td></td><td></td><td colspan="31"></td><td>${fmt(tc)}</td><td></td></tr></tbody></table>`;
-  return h+firmas()+`<div class="pie">Generado el ${new Date().toLocaleString('es-SV')} · Saldo final = existencia inicial + cantidad recibida − consumo (si no hay inicial ni recibido, muestra el consumo del mes).</div>`;
+  return h+firmas()+`<div class="pie">Generado el ${new Date().toLocaleString('es-SV')} · Saldo final = existencia inicial + cantidad recibida − consumo. Un saldo negativo indica que falta la existencia inicial o un vale..</div>`;
 }
 function docVales(mid){
   const m=mes(mid); const vs=S.vales.filter(v=>v.mes===mid).sort((a,b)=>(a.fecha||'')<(b.fecha||'')?-1:1);
