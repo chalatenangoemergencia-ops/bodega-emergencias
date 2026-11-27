@@ -288,7 +288,13 @@ table.grid tr.hlF td{background:#eaf2ff}table.grid td.hlC{background:#fff3c4!imp
 table.pl-t{border-collapse:collapse;table-layout:fixed;background:#fff}
 table.pl-t th,table.pl-t td{border:1px solid #000;padding:0 1px;height:17px;font-size:10.5px;text-align:center;white-space:nowrap;overflow:hidden}
 table.pl-t col.cn{width:205px}table.pl-t col.cd{width:27px}table.pl-t col.ch{width:34px}
-table.pl-t th{font-weight:700;font-size:10px}
+table.pl-t th{font-weight:700;font-size:10px;background:#d9d9d9;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+table.pl-t tr.g-fila td{background-color:#eaf2ff}
+table.pl-t tr.g-fila td.nm{background:#cfe0ff;color:#0d2347}
+table.pl-t .g-col{background-color:#eaf2ff}
+table.pl-t th.g-col{background:#3d6fc2!important;color:#fff}
+table.pl-t tr.g-fila td.g-col{background-color:#ffe08a!important;font-weight:800}
+table.pl-t td.aus.g-col,table.pl-t tr.g-fila td.aus{box-shadow:inset 0 0 0 2px #3d6fc2}
 table.pl-t th.nomh{font-size:12px}
 table.pl-t td.nm{text-align:left;padding-left:3px;font-size:9.5px;font-weight:600}
 table.pl-t tr.sep td{height:12px}
@@ -335,6 +341,8 @@ table.pl-t tr.filasel td.aus{filter:saturate(1.4) brightness(.97)}
   body.impPlan table.pl-t td.pc.sel{outline:none;background:#fff}
   body.impPlan table.pl-t td.falta{background:#fff}
   body.impPlan .pl-obs-txt{background-color:#fff}
+  body.impPlan table.pl-t .g-col,body.impPlan table.pl-t tr.g-fila td{background-color:#fff!important;box-shadow:none!important;font-weight:inherit}
+  body.impPlan table.pl-t th.g-col{background:#d9d9d9!important;color:#000}
   body.impPlan table.pl-t td.aus,body.impPlan table.pl-t tr.filasel td,body.impPlan table.pl-t tr.filasel td.nm{background:#fff!important;filter:none}
   body.impPlan table.pl-t td.nm.rev{box-shadow:none}
 }
@@ -5321,9 +5329,9 @@ function plDocHTML(mid){
   let h=`<div class="pl-doc" id="plDoc"><div class="pl-enc"><div>HOSPITAL NACIONAL “DR. LUIS EDMUNDO VÁSQUEZ”</div><div>DEPARTAMENTO DE ENFERMERÍA</div><div>HORARIO DE TRABAJO ${plE(serv)} ${PL_MES[m-1]} ${y}</div></div>
   <table class="pl-t"><colgroup><col class="cn">${'<col class="cd">'.repeat(dm)}<col class="ch"><col class="ch"></colgroup>
   <thead><tr><th rowspan="2" class="nomh">NOMBRES</th>`;
-  for(let d=1;d<=dm;d++) h+=`<th>${d}</th>`;
+  for(let d=1;d<=dm;d++) h+=`<th data-d="${d}">${d}</th>`;
   h+='<th rowspan="2">H/T</th><th rowspan="2">T/N</th></tr><tr>';
-  for(let d=1;d<=dm;d++) h+=`<th>${PL_INI[plDow(mid,d)]}</th>`;
+  for(let d=1;d<=dm;d++) h+=`<th data-d="${d}">${PL_INI[plDow(mid,d)]}</th>`;
   h+='</tr></thead><tbody>';
   let g=null;
   plOrden().forEach(p=>{ if(g!==null && (p.grupo||1)!==g) h+=`<tr class="sep"><td></td>${'<td></td>'.repeat(dm+2)}</tr>`; g=p.grupo||1;
@@ -5333,7 +5341,7 @@ function plDocHTML(mid){
     for(let d=1;d<=dm;d++){ const col=plColor(c[d]); h+=`<td class="pc${plFij(M,p.id,d)?' fij':''}${col?' aus':''}${PL_SEL&&PL_SEL.p===p.id&&PL_SEL.d===d?' sel':''}" data-p="${p.id}" data-d="${d}"${col?` style="background:${col}"`:''}>${plE(c[d]||'')}${e[d]?`<sup>+${plE(e[d])}</sup>`:''}</td>`; }
     h+=`<td class="ht">${plHoras(M,p,dm)||''}</td><td class="ht">${n||'-'}</td></tr>`; });
   [['M','Mañana'],['T','Tarde'],['N','Noche']].forEach(([k,n])=>{ h+=`<tr class="tot"><td class="nm">${n}</td>`;
-    for(let d=1;d<=dm;d++) h+=`<td${FL.some(f=>f.d===d&&f.k===k)?' class="falta"':''}>${plCobDia(mid,M,d)[k]}</td>`;
+    for(let d=1;d<=dm;d++) h+=`<td data-d="${d}"${FL.some(f=>f.d===d&&f.k===k)?' class="falta"':''}>${plCobDia(mid,M,d)[k]}</td>`;
     h+='<td>-</td><td>-</td></tr>'; });
   h+=`</tbody></table><div class="pl-obs"><b>Observaciones:</b><div class="pl-obs-txt" id="plObs" contenteditable="true" spellcheck="false">${plE(M.obs||'')}</div></div></div>`;
   return h;
@@ -5391,7 +5399,7 @@ function plResumen(){ const M=plMes(PL_MID), dm=plDm(PL_MID);
 function plCerrarPop(){ const p=document.getElementById('plPop'); if(p) p.remove(); if(PL_SEL){ PL_SEL=null; document.querySelectorAll('#plDoc td.pc.sel').forEach(t=>t.classList.remove('sel')); } }
 function plAbrirPop(td){
   plCerrarPop(); const pid=td.dataset.p, d=+td.dataset.d, M=plMes(PL_MID), B=plBase(), per=B.personal.find(x=>x.id===pid); if(!per) return;
-  PL_SEL={p:pid,d}; td.classList.add('sel');
+  PL_SEL={p:pid,d}; td.classList.add('sel'); plGuia(td);
   const act=(M.cel[pid]||{})[d]||'', ext=(M.ext[pid]||{})[d]||'', fij=plFij(M,pid,d);
   const pop=document.createElement('div'); pop.className='pl-pop'; pop.id='plPop';
   pop.innerHTML=`<h4>${plE(per.nombre)}</h4><div class="muted">${['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][plDow(PL_MID,d)]} ${d} · actual: <b>${plE(act||'—')}</b></div>
@@ -5590,6 +5598,12 @@ document.getElementById('plHoja').addEventListener('click',e=>{ const td=e.targe
   const nm=e.target.closest('td.nm[data-fila]'); if(nm){ PL_FILA=PL_FILA===nm.dataset.fila?null:nm.dataset.fila; document.querySelectorAll('#plDoc tr.filasel').forEach(t=>t.classList.remove('filasel')); if(PL_FILA) nm.parentNode.classList.add('filasel'); } });
 document.addEventListener('mousedown',e=>{ const p=document.getElementById('plPop'); if(p && !p.contains(e.target) && !e.target.closest('td.pc')) plCerrarPop(); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') plCerrarPop(); });
+/* guía: resalta la fila (persona) y la columna (día) de la casilla, para no equivocarse */
+function plGuia(td){ document.querySelectorAll('#plDoc .g-col,#plDoc .g-fila').forEach(x=>x.classList.remove('g-col','g-fila'));
+  const ref=td||(PL_SEL&&document.querySelector(`#plDoc td.pc[data-p="${PL_SEL.p}"][data-d="${PL_SEL.d}"]`)); if(!ref) return;
+  document.querySelectorAll(`#plDoc [data-d="${ref.dataset.d}"]`).forEach(x=>x.classList.add('g-col')); ref.parentNode.classList.add('g-fila'); }
+document.getElementById('plHoja').addEventListener('mouseover',e=>{ const td=e.target.closest('td.pc'); if(td) plGuia(td); });
+document.getElementById('plHoja').addEventListener('mouseleave',()=>plGuia(null));
 window.addEventListener('resize',()=>{ if(vistaActual()==='vistaPlan') plVista(); });
 
 /* ---------- TABULADOR DIARIO DE ENFERMERÍA ---------- */
