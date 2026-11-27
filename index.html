@@ -3208,6 +3208,7 @@ nav .fuera-area{display:none!important}
       <button class="sol-tab on" data-pt="cob">👥 Cobertura</button>
       <button class="sol-tab" data-pt="per">🧑‍⚕️ Personal y metas</button>
       <button class="sol-tab" data-pt="cod">🕒 Códigos de turno</button>
+      <button class="sol-tab" data-pt="noc">🌙 Noches y descansos</button>
       <button class="sol-tab" data-pt="aus">🏖️ Ausencias y vacaciones</button>
       <button class="sol-tab" data-pt="reg">📏 Reglas</button>
     </div>
@@ -5192,11 +5193,12 @@ function plBase(){
   if(!S.plan.base){ const def=(typeof PERSONAL_DEF!=='undefined' && PERSONAL_DEF)?PERSONAL_DEF:[];
     S.plan.base={personal:JSON.parse(JSON.stringify(def)), codigos:JSON.parse(JSON.stringify(PL_COD_DEF)),
       cob:{lic:{dia:2,M:1,T:1,N:1}, tec:{dia:6,M:4,T:2,N:2}},
-      reglas:{maxSeg:5, postNoche:true, tolExtra:12, genN:'N', genT:'6/6', genM:'6/2'},
+      reglas:{maxSeg:5, libresNoche:1, nochesExactas:true, libresSemana:0, tolExtra:12, genN:'N', genT:'6/6', genM:'6/2'},
       imp:{papel:'carta', ofW:13, ofH:8.5, ajustar:true}}; }
   const b=S.plan.base; b.ausencias=b.ausencias||[]; if(!b.codigos.some(k=>k.c==='O')) b.codigos.push({c:'O',ini:'',fin:'',h:0,M:0,T:0,N:0,tipo:'a',nom:'Otra ausencia (ver observación)'});
   b.codigos.forEach(k=>{ if(k.c==='P'&&k.nom==='Permiso') k.nom='Permiso personal'; });
-  b.imp=b.imp||{papel:'carta',ofW:13,ofH:8.5,ajustar:true}; b.reglas=Object.assign({maxSeg:5,postNoche:true,tolExtra:12,genN:'N',genT:'6/6',genM:'6/2'}, b.reglas||{});
+  b.imp=b.imp||{papel:'carta',ofW:13,ofH:8.5,ajustar:true}; b.reglas=b.reglas||{}; Object.entries({maxSeg:5,postNoche:true,tolExtra:12,genN:'N',genT:'6/6',genM:'6/2'}).forEach(([k,v])=>{ if(b.reglas[k]===undefined) b.reglas[k]=v; });
+  if(b.reglas.libresNoche===undefined) b.reglas.libresNoche=b.reglas.postNoche===false?0:1; if(b.reglas.nochesExactas===undefined) b.reglas.nochesExactas=true; if(b.reglas.libresSemana===undefined) b.reglas.libresSemana=0;
   return b;
 }
 const plDm=mid=>{ const [y,m]=mid.split('-').map(Number); return new Date(y,m,0).getDate(); };
@@ -5225,6 +5227,14 @@ function plDiasRango(a,anio){ let n=0; const ini=new Date(a.desde+'T12:00'), fin
 function plVacUsadas(p,anio){ return plBase().ausencias.filter(a=>a.pid===p.id&&a.c==='V').reduce((s,a)=>s+plDiasRango(a,anio),0); }
 function plHoras(M,p,dm){ let h=0; const c=M.cel[p.id]||{}, e=M.ext[p.id]||{}; for(let d=1;d<=dm;d++){ if(c[d]) h+=plH(c[d]); if(e[d]) h+=Number(e[d])||0; } return h; }
 function plExtras(M,p,dm){ let h=0; const e=M.ext[p.id]||{}; for(let d=1;d<=dm;d++) h+=Number(e[d])||0; return h; }
+/* reparte por igual las noches del mes entre quienes rotan (no incluye a quien tiene 0 noches por defecto) */
+function plRepartir(mid,cat){ const B=plBase(), M=plMes(mid), dm=plDm(mid); M.noc=M.noc||{};
+  const L=plActivos().filter(p=>!p.patron&&p.cuenta!==false&&plCatCob(p)===cat&&(+p.noches||0)>0); if(!L.length) return null;
+  const nec=(+B.cob[cat].N||0)*dm, base=Math.floor(nec/L.length); let resto=nec-base*L.length;
+  const pm=S.plan.meses[plMesPrevio(mid)], prev=p=>pm?plNoches(pm,p,plDm(plMesPrevio(mid))):0;
+  L.slice().sort((a,b)=>prev(a)-prev(b)).forEach(p=>{ M.noc[p.id]=base+(resto>0?1:0); if(resto>0) resto--; });
+  return {nec, base, n:L.length}; }
+function plNochesMeta(M,p){ const v=M.noc&&M.noc[p.id]; return (v!==undefined&&v!==null&&v!=='')?Number(v):(+p.noches||0); }
 function plNoches(M,p,dm){ let n=0; const c=M.cel[p.id]||{}; for(let d=1;d<=dm;d++) if(c[d]&&plFr(c[d]).N) n++; return n; }
 function plMesPrevio(mid){ const [y,m]=mid.split('-').map(Number); const d=new Date(y,m-2,1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function plUltimoPrevio(mid,p){ const pm=plMesPrevio(mid), PM=S.plan.meses[pm]; if(!PM||!PM.cel[p.id]) return ''; return PM.cel[p.id][plDm(pm)]||''; }
@@ -5236,6 +5246,7 @@ function plCobDia(mid,M,d,cat){ let r={M:0,T:0,N:0,dist:0};
 /* ---- generador ---- */
 function plGenerar(mid){
   plAplicarAus(mid);
+  { const M0=plMes(mid); M0.noc=M0.noc||{}; ['lic','tec'].forEach(cat=>{ const L=plActivos().filter(p=>!p.patron&&p.cuenta!==false&&plCatCob(p)===cat); if(!L.some(p=>M0.noc[p.id]!==undefined)) plRepartir(mid,cat); }); }
   const B=plBase(), M=plMes(mid), dm=plDm(mid), R=B.reglas, P=plActivos(), rnd=plRand((M.var||1)*7919+Number(mid.replace('-','')));
   P.forEach(p=>{ const c=M.cel[p.id]=M.cel[p.id]||{}; for(let d=1;d<=dm;d++) if(!plFij(M,p.id,d)) delete c[d];
     const e=M.ext[p.id]; if(e) for(const d in e) if(!plFij(M,p.id,+d)) delete e[d]; });
@@ -5243,28 +5254,31 @@ function plGenerar(mid){
   P.filter(p=>p.patron).forEach(p=>{ for(let d=1;d<=dm;d++){ if(plFij(M,p.id,d)) continue; const w=plDow(mid,d);
     M.cel[p.id][d]=(w===0||w===6)?'L':(M.asuetos.includes(d)?'A':p.patron); } });
   // descanso obligado después de una noche fijada
-  P.forEach(p=>{ for(let d=1;d<dm;d++){ const c=M.cel[p.id][d]; if(c&&plFr(c).N&&R.postNoche&&!M.cel[p.id][d+1]) M.cel[p.id][d+1]='L'; } });
+  const LN=Math.max(0,+R.libresNoche||0);
+  const descanso=(p,d)=>{ for(let j=1;j<=LN&&d+j<=dm;j++) if(!M.cel[p.id][d+j]) M.cel[p.id][d+j]='L'; };
+  P.forEach(p=>{ for(let d=1;d<dm;d++){ const c=M.cel[p.id][d]; if(c&&plFr(c).N&&!(M.cel[p.id][d+1]&&plFr(M.cel[p.id][d+1]).N)) descanso(p,d); } });
   const noche=(p,d)=>{ if(d<1) return !!plFr(plUltimoPrevio(mid,p)).N; const c=M.cel[p.id][d]; return !!c&&plFr(c).N; };
   const trab=(p,d)=>{ const c=M.cel[p.id][d]; return !!c&&plTrab(c); };
   const libres=(p,d)=>{ let n=0; for(let k=d+1;k<=dm;k++) if(!M.cel[p.id][k]) n++; return n; };
   const puede=(p,d,code,tier)=>{
     if(M.cel[p.id][d]) return false;
-    if(R.postNoche && noche(p,d-1)) return false;
+    for(let j=1;j<=LN;j++) if(noche(p,d-j)) return false;
     const f=plFr(code);
-    if(f.N && d<dm){ const nx=M.cel[p.id][d+1]; if(nx && plTrab(nx)) return false; }
+    if(f.N) for(let j=1;j<=LN&&d+j<=dm;j++){ const nx=M.cel[p.id][d+j]; if(nx && plTrab(nx)) return false; }
+    if(+R.libresSemana>0){ const w=(plDow(mid,d)+6)%7; let tr=0; for(let k=d-w;k<=d-w+6;k++) if(k>=1&&k<=dm&&k!==d&&trab(p,k)) tr++; if(tr+1>7-(+R.libresSemana)) return false; }
     let a=0; for(let k=d-1;k>=1&&trab(p,k);k--) a++; let b=0; for(let k=d+1;k<=dm&&trab(p,k);k++) b++;
     if(a+1+b>(+R.maxSeg||5)) return false;
-    const nt=+p.noches||0;
-    if(f.N && plNoches(M,p,dm) >= (tier===1?nt:(nt?nt+1:0))) return false;
+    const nt=plNochesMeta(M,p);
+    if(f.N && plNoches(M,p,dm) >= (tier===1||R.nochesExactas?nt:(nt?nt+1:0))) return false;
     const lim=plMeta(mid,M,p)+(tier===1?0:(+R.tolExtra||0));
     if(plHoras(M,p,dm)+plH(code)>lim) return false;
     return true;
   };
-  const asignar=(p,d,code)=>{ M.cel[p.id][d]=code; if(plFr(code).N && R.postNoche && d<dm && !M.cel[p.id][d+1]) M.cel[p.id][d+1]='L'; };
+  const asignar=(p,d,code)=>{ M.cel[p.id][d]=code; if(plFr(code).N) descanso(p,d); };
   const elegir=(pool,d,code)=>{ for(const tier of [1,2]){ const c=pool.filter(p=>puede(p,d,code,tier)); if(!c.length) continue;
       const f=plFr(code);
       c.sort((x,y)=>{ const sc=p=>{ const pend=plMeta(mid,M,p)-plHoras(M,p,dm); let s=pend/(libres(p,d)+1);
-          if(f.N) s+=((+p.noches||0)-plNoches(M,p,dm))*4; return s+rnd()*0.05; }; return sc(y)-sc(x); });
+          if(f.N){ const falta=plNochesMeta(M,p)-plNoches(M,p,dm); s=falta*40/(libres(p,d)+1)+falta*4+s*0.2; } return s+rnd()*0.05; }; return sc(y)-sc(x); });
       return c[0]; } return null; };
   const pools={lic:P.filter(p=>!p.patron&&p.cuenta!==false&&plCatCob(p)==='lic'), tec:P.filter(p=>!p.patron&&p.cuenta!==false&&plCatCob(p)==='tec')};
   for(let d=1;d<=dm;d++) for(const cat of ['lic','tec']){
@@ -5286,6 +5300,13 @@ function plGenerar(mid){
   P.forEach(p=>{ for(let d=1;d<=dm;d++) if(!M.cel[p.id][d]) M.cel[p.id][d]='L'; });
   M.generado=new Date().toISOString();
 }
+/* prueba varias distribuciones y se queda con la de menos faltantes */
+function plGenerarMejor(mid){ const M=plMes(mid), base=JSON.stringify(M), v0=M.var||1, dm=plDm(mid); let mejor=null;
+  for(let i=0;i<10;i++){ const M2=JSON.parse(base); M2.var=v0*1000+i; S.plan.meses[mid]=M2; plGenerar(mid);
+    const Mx=S.plan.meses[mid], difN=plActivos().reduce((s,p)=>s+Math.abs(plNoches(Mx,p,dm)-plNochesMeta(Mx,p))*(p.patron?0:1),0);
+    const pend=plActivos().reduce((s,p)=>s+Math.max(0,plMeta(mid,Mx,p)-plHoras(Mx,p,dm)),0);
+    const sc=plFaltantes(mid).length*1000+difN*50+pend; if(!mejor||sc<mejor.sc) mejor={sc,txt:JSON.stringify(Mx)}; if(sc<20) break; }
+  const R=JSON.parse(mejor.txt); R.var=v0; S.plan.meses[mid]=R; }
 function plFaltantes(mid){ const B=plBase(), M=plMes(mid), dm=plDm(mid), out=[];
   if(!Object.keys(M.cel).length) return out;
   for(let d=1;d<=dm;d++) for(const cat of ['lic','tec']){ const q=B.cob[cat]||{}, r=plCobDia(mid,M,d,cat);
@@ -5360,7 +5381,7 @@ function plAbrirAus(pre){ PL_AUS_PRE=pre||null; PL_TAB='aus'; const c=document.g
 function plResumen(){ const M=plMes(PL_MID), dm=plDm(PL_MID);
   const filas=plOrden().map(p=>{ const meta=plMeta(PL_MID,M,p), h=plHoras(M,p,dm), ex=plExtras(M,p,dm), dif=h-meta;
     return `<tr><td>${p.num||'—'}</td><td>${plE(p.nombre)}</td><td>${plE(PL_CAT[p.cat])}</td><td class="num">${meta}</td><td class="num">${h-ex}</td><td class="num">${ex||''}</td><td class="num"><b>${h}</b></td>
-      <td class="num ${dif<0?'neg':''}">${dif<0?-dif:''}</td><td class="num ${dif>0?'pos':''}">${dif>0?dif:''}</td><td class="num">${plNoches(M,p,dm)}/${+p.noches||0}</td>
+      <td class="num ${dif<0?'neg':''}">${dif<0?-dif:''}</td><td class="num ${dif>0?'pos':''}">${dif>0?dif:''}</td><td class="num ${plNoches(M,p,dm)!==plNochesMeta(M,p)&&Object.keys(M.cel).length?'neg':''}">${plNoches(M,p,dm)}/${plNochesMeta(M,p)}</td>
       <td class="num">${plDiasAus(PL_MID,M,p)||''}</td><td style="text-align:center"><input type="checkbox" class="plRev" data-p="${p.id}" ${M.rev&&M.rev[p.id]?'checked':''}></td></tr>`; }).join('');
   document.getElementById('plResumen').innerHTML=`<table class="lista pl-res"><thead><tr><th>N° matriz</th><th>Nombre</th><th>Categoría</th><th class="num">Meta (h)</th><th class="num">Turnos (h)</th><th class="num">Extra anotada</th><th class="num">H/T</th><th class="num">Pendientes</th><th class="num">Exceso / extra</th><th class="num">Noches</th><th class="num" title="Días hábiles de vacación, permiso, incapacidad u otra ausencia (se descuentan de la meta automática)">Ausencias</th><th>✔ Revisado</th></tr></thead><tbody>${filas}</tbody></table>`;
   document.querySelectorAll('#plResumen .plRev').forEach(i=>i.onchange=()=>{ const M2=plMes(PL_MID); M2.rev=M2.rev||{}; if(i.checked) M2.rev[i.dataset.p]=true; else delete M2.rev[i.dataset.p]; guardar();
@@ -5427,7 +5448,7 @@ function plPintarConf(){
         <td><input data-f="plaza" value="${plE(p.plaza||'')}" style="width:190px"></td>
         <td><select data-f="grupo"><option value="1"${(p.grupo||1)==1?' selected':''}>1</option><option value="2"${p.grupo==2?' selected':''}>2</option><option value="3"${p.grupo==3?' selected':''}>3</option></select></td>
         <td><input data-f="meta" type="number" min="0" value="${M.meta[p.id]??''}" placeholder="${plMetaAuto(PL_MID,M)}" style="width:64px"></td>
-        <td><input data-f="noches" type="number" min="0" max="15" value="${+p.noches||0}" style="width:52px"></td>
+        <td><input data-f="noches" type="number" min="0" max="15" value="${+p.noches||0}" style="width:52px" title="Noches por mes por defecto (cada mes se pueden cambiar en 🌙 Noches y descansos)"></td>
         <td><select data-f="patron"><option value="">— rota —</option>${cods.map(c=>`<option${p.patron===c?' selected':''}>${plE(c)}</option>`).join('')}</select></td>
         <td style="text-align:center"><input type="checkbox" data-f="cuenta" ${p.cuenta!==false?'checked':''}></td>
         <td style="text-align:center"><input type="checkbox" data-f="activo" ${p.activo!==false?'checked':''}></td>
@@ -5461,6 +5482,30 @@ function plPintarConf(){
       tr.querySelector('[data-del]').onclick=()=>{ if(!confirm('¿Eliminar el código '+k.c+'?')) return; B.codigos.splice(+tr.dataset.i,1); guardar(); pintarPlan(); }; });
     z.querySelector('#plCodAdd').onclick=()=>{ const c=prompt('Nuevo código (ej.: 2/8):'); if(!c||B.codigos.some(x=>x.c===c.trim())) return; B.codigos.push({c:c.trim(),ini:'',fin:'',h:8,M:1,T:0,N:0,tipo:'t'}); guardar(); pintarPlan(); };
   }
+  if(PL_TAB==='noc'){
+    const R=B.reglas, dm=plDm(PL_MID), M2=plMes(PL_MID); M2.noc=M2.noc||{}; const hay=Object.keys(M2.cel).length;
+    const rot=cat=>plOrden().filter(p=>!p.patron&&p.cuenta!==false&&plCatCob(p)===cat);
+    const caja=(cat,t)=>{ const L=rot(cat), nec=(+B.cob[cat].N||0)*dm, suma=L.reduce((s,p)=>s+plNochesMeta(M2,p),0);
+      return `<div class="pl-caja"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><h3 style="margin:0;flex:1">${t}</h3><button class="btn ok sm" data-igual="${cat}">⚖️ Repartir por igual</button></div>
+        <div class="muted" style="margin:6px 0">Se necesitan <b>${nec}</b> noches este mes (${+B.cob[cat].N||0} por noche × ${dm} días). Elegidas: <b class="${suma<nec?'neg':(suma>nec?'pos':'')}">${suma}</b>${suma<nec?' → faltan '+(nec-suma):(suma>nec?' → sobran '+(suma-nec):' ✔')}</div>
+        <table class="lista"><thead><tr><th>Persona</th><th class="num">Noches del mes</th><th class="num">Asignadas</th></tr></thead><tbody>${L.map(p=>`<tr><td>${plE(p.nombre)}</td>
+          <td class="num" style="white-space:nowrap"><button class="btn sm" data-nm="${p.id}|-1">−</button> <input type="number" min="0" max="16" data-noc="${p.id}" value="${plNochesMeta(M2,p)}" style="width:52px;text-align:center;font-weight:700"> <button class="btn sm" data-nm="${p.id}|1">+</button></td>
+          <td class="num ${hay&&plNoches(M2,p,dm)!==plNochesMeta(M2,p)?'neg':''}">${hay?plNoches(M2,p,dm):'—'}</td></tr>`).join('')}</tbody></table></div>`; };
+    z.innerHTML=`<div class="pl-caja"><h3>Descansos (los elige la jefatura)</h3><div class="fila">
+        <div class="campo"><label>Días libres después de una noche</label><select id="plRLN">${[0,1,2,3].map(n=>`<option value="${n}"${+R.libresNoche===n?' selected':''}>${n===0?'Ninguno':n+' día'+(n>1?'s':'')+' libre'+(n>1?'s':'')}</option>`).join('')}</select></div>
+        <div class="campo"><label>Días libres mínimos por semana</label><select id="plRLS">${[0,1,2,3].map(n=>`<option value="${n}"${+R.libresSemana===n?' selected':''}>${n===0?'Sin mínimo':n+' por semana'}</option>`).join('')}</select></div>
+        <div class="campo"><label>Máximo de días seguidos trabajando</label><input type="number" id="plRSeg" min="1" max="14" value="${R.maxSeg}"></div>
+        <label class="pl-chk" style="align-self:flex-end;padding-bottom:8px"><input type="checkbox" id="plRNE" ${R.nochesExactas?'checked':''}> No dar más noches de las elegidas a nadie</label></div>
+        <p class="muted" style="margin:6px 0 0">Ejemplo: con “2 días libres”, después de cada <b>N</b> quedan <b>L L</b>. Si se cambia algo aquí, pulse <b>⚡ Generar mes</b> para aplicarlo (lo fijado 📌 se respeta).</p></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px;margin-top:12px">${caja('lic','👩‍⚕️ Noches de licenciados/as')}${caja('tec','🧑‍⚕️ Noches de técnicos/as y auxiliares')}</div>
+      <p class="muted">“Repartir por igual” divide las noches que se necesitan entre todas las personas que rotan; si sobra alguna, se la da a quienes tuvieron menos noches el mes anterior. Puede ajustar a cada uno con − y +. Las noches elegidas son de este mes. Si en un mes no se elige nada, al generar se reparten por igual automáticamente (quien tenga 0 noches en “Personal y metas” no hace noches).</p>`;
+    const setR=(id,k)=>z.querySelector('#'+id).onchange=e=>{ R[k]=e.target.type==='checkbox'?e.target.checked:Number(e.target.value); guardar(); plPintarConf(); };
+    setR('plRLN','libresNoche'); setR('plRLS','libresSemana'); setR('plRSeg','maxSeg'); setR('plRNE','nochesExactas');
+    z.querySelectorAll('[data-noc]').forEach(i=>i.onchange=()=>{ M2.noc[i.dataset.noc]=Math.max(0,Number(i.value)||0); guardar(); plPintarConf(); plResumen(); });
+    z.querySelectorAll('[data-nm]').forEach(b=>b.onclick=()=>{ const [id,s]=b.dataset.nm.split('|'), p=B.personal.find(x=>x.id===id); M2.noc[id]=Math.max(0,plNochesMeta(M2,p)+Number(s)); guardar(); plPintarConf(); plResumen(); });
+    z.querySelectorAll('[data-igual]').forEach(b=>b.onclick=()=>{ const r=plRepartir(PL_MID,b.dataset.igual); if(!r) return;
+      guardar(); plPintarConf(); plResumen(); toast(`⚖️ ${r.nec} noches repartidas entre ${r.n}: ${r.base}${r.nec%r.n?' o '+(r.base+1):''} por persona`,'ok'); });
+  }
   if(PL_TAB==='aus'){
     const anio=+PL_MID.slice(0,4), tipos=B.codigos.filter(k=>k.tipo==='a'&&k.c!=='A'), pre=PL_AUS_PRE||{}; PL_AUS_PRE=null;
     const ini=pre.desde||plFecha(PL_MID,1), per=plOrden(), nomP=id=>(B.personal.find(p=>p.id===id)||{nombre:'(ya no está)'}).nombre;
@@ -5490,15 +5535,14 @@ function plPintarConf(){
   }
   if(PL_TAB==='reg'){ const R=B.reglas, cods=B.codigos.filter(k=>k.tipo==='t').map(k=>k.c), sel=(id,v)=>`<select id="${id}">${cods.map(c=>`<option${c===v?' selected':''}>${plE(c)}</option>`).join('')}</select>`;
     z.innerHTML=`<div class="pl-grid4"><div class="pl-caja"><h3>Descansos</h3>
-        <label class="pl-chk"><input type="checkbox" id="plRPost" ${R.postNoche?'checked':''}> Libre (L) el día siguiente a una noche</label>
-        <div class="campo" style="margin-top:8px"><label>Máximo de días seguidos trabajando</label><input type="number" id="plRSeg" min="1" max="14" value="${R.maxSeg}"></div></div>
+        <div class="muted">Los días libres después de la noche, los libres por semana y los días seguidos se eligen en <b>🌙 Noches y descansos</b>.</div></div>
       <div class="pl-caja"><h3>Horas</h3><div class="campo"><label>Horas sobre la meta permitidas si falta cobertura</label><input type="number" id="plRTol" min="0" max="60" value="${R.tolExtra}"></div>
         <div class="muted">0 = nunca pasar la meta (si falta personal se avisa).</div></div>
       <div class="pl-caja"><h3>Turnos que usa el generador</h3><div class="fila"><div class="campo"><label>Noche</label>${sel('plRGN',R.genN)}</div><div class="campo"><label>Mañana y tarde</label>${sel('plRGT',R.genT)}</div><div class="campo"><label>Mañana</label>${sel('plRGM',R.genM)}</div></div></div>
       <div class="pl-caja"><h3>Otra propuesta</h3><div class="muted">Genera una distribución diferente con las mismas reglas (respeta lo fijado 📌).</div><button class="btn sm" id="plRVar" style="margin-top:8px">🎲 Variante ${plMes(PL_MID).var||1} → siguiente</button></div></div>`;
     const set=(id,k,num)=>z.querySelector('#'+id).onchange=e=>{ R[k]=e.target.type==='checkbox'?e.target.checked:(num?Number(e.target.value)||0:e.target.value); guardar(); };
-    set('plRPost','postNoche'); set('plRSeg','maxSeg',1); set('plRTol','tolExtra',1); set('plRGN','genN'); set('plRGT','genT'); set('plRGM','genM');
-    z.querySelector('#plRVar').onclick=()=>{ const M2=plMes(PL_MID); M2.var=(M2.var||1)+1; plGenerar(PL_MID); guardar(); pintarPlan(); toast('🎲 Nueva propuesta generada','ok'); };
+    set('plRTol','tolExtra',1); set('plRGN','genN'); set('plRGT','genT'); set('plRGM','genM');
+    z.querySelector('#plRVar').onclick=()=>{ const M2=plMes(PL_MID); M2.var=(M2.var||1)+1; plGenerarMejor(PL_MID); guardar(); pintarPlan(); toast('🎲 Nueva propuesta generada','ok'); };
   }
 }
 /* ---- personal desde la matriz PDF (Recursos Humanos) ---- */
@@ -5535,7 +5579,7 @@ document.getElementById('plMesSel').addEventListener('change',()=>{ plCerrarPop(
 document.getElementById('plAnio').addEventListener('change',()=>{ plCerrarPop(); pintarPlan(); });
 document.getElementById('plGen').addEventListener('click',()=>{ const M=plMes(PL_MID); const hay=Object.values(M.cel).some(c=>Object.keys(c).length);
   if(hay && !confirm('¿Generar de nuevo '+PL_MES[+PL_MID.slice(5)-1].toLowerCase()+' '+PL_MID.slice(0,4)+'?\nSe conservan las casillas fijadas 📌; el resto se vuelve a calcular.')) return;
-  plGenerar(PL_MID); guardar(); pintarPlan(); const f=plFaltantes(PL_MID); toast(f.length?`⚠ Plan generado: revise ${f.length} faltante(s) de cobertura`:'✅ Plan generado con cobertura completa', f.length?'':'ok'); });
+  plGenerarMejor(PL_MID); guardar(); pintarPlan(); const f=plFaltantes(PL_MID); toast(f.length?`⚠ Plan generado: revise ${f.length} faltante(s) de cobertura`:'✅ Plan generado con cobertura completa', f.length?'':'ok'); });
 document.getElementById('plConfBtn').addEventListener('click',()=>{ const c=document.getElementById('plConf'); c.classList.toggle('hidden'); if(!c.classList.contains('hidden')) plPintarConf(); });
 document.getElementById('plTabs').addEventListener('click',e=>{ const b=e.target.closest('.sol-tab'); if(!b) return; PL_TAB=b.dataset.pt; plPintarConf(); });
 document.getElementById('plPapel').addEventListener('change',e=>{ plBase().imp.papel=e.target.value; guardar(); pintarPlan(); });
