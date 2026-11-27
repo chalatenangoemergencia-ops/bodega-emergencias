@@ -254,7 +254,6 @@ table.grid th{background:linear-gradient(180deg,#2f5ea8,#24508f)}
 <body>
 <div id="login" class="hidden" style="position:fixed;inset:0;background:var(--fondo);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px">
   <div class="panel" style="width:min(420px,100%);text-align:center">
-    <img id="logoLogin" style="height:60px;margin:6px 0 10px" alt="Hospital Nacional Chalatenango">
     <h2 style="margin-bottom:4px">Sistema de Bodega de Emergencias</h2>
     <div class="muted" style="margin-bottom:14px">Entre con su correo y contraseña</div>
     <div class="campo" style="text-align:left;margin-bottom:8px"><label>Correo</label><input id="lgCorreo" type="email" autocomplete="username"></div>
@@ -2913,7 +2912,6 @@ function avisoNovedades(){ document.getElementById('verTxt').textContent='Versi�
     En la matriz el encabezado queda fijo y se resaltan la fila y la columna donde escribe. <button class="btn sm" onclick="this.parentNode.remove()">Entendido</button>`;
   document.querySelector('main').prepend(d);
 }
-document.getElementById('logoLogin').src=LOGO;
 /* ================= VERSIÓN EN LÍNEA (Supabase) ================= */
 const SB_URL='https://djieropayuzlwjuegopb.supabase.co', SB_KEY='sb_publishable_trj7n_Oco0odCJ0-ln9bBQ_o0Zly5jF';
 const sb = supabase.createClient(SB_URL, SB_KEY);
